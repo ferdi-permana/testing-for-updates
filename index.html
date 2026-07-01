@@ -102,7 +102,7 @@
     .sim-input-wrapper label { font-size: 11px; color: var(--muted); font-weight: 500; }
     .sim-input-wrapper input { width: 100%; min-height: 38px; font-weight: 700; font-size: 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); text-align: center; }
     .sim-results-wrapper { display: flex; gap: 12px; flex: 1; justify-content: flex-end; }
-    .sim-exchange-result { background: var(--surface-2); border-radius: 6px; padding: 10px 14px; min-width: 175px; display: flex; flex-direction: column; gap: 4px; }
+    .sim-exchange-result { background: var(--surface-2); border-radius: 6px; padding: 10px 14px; min-width: 145px; display: flex; flex-direction: column; gap: 4px; }
     .sim-ex-title { font-size: 11px; font-weight: 700; color: var(--muted); }
     .sim-rate-row { display: flex; justify-content: space-between; font-size: 12px; font-variant-numeric: tabular-nums; }
     .sim-rate-row .rate-val { font-weight: 700; }
@@ -245,6 +245,11 @@
           </div>
           
           <div class="sim-results-wrapper">
+            <div class="sim-exchange-result">
+              <span class="sim-ex-title" style="color: #704fea;">Reku</span>
+              <div class="sim-rate-row"><span>Maker (M):</span> <span class="rate-val m" id="rate-m-reku">Rp -</span></div>
+              <div class="sim-rate-row"><span>Taker (T):</span> <span class="rate-val t" id="rate-t-reku">Rp -</span></div>
+            </div>
             <div class="sim-exchange-result">
               <span class="sim-ex-title" style="color: #2f6f9f;">Indodax</span>
               <div class="sim-rate-row"><span>Maker (M):</span> <span class="rate-val m" id="rate-m-indodax">Rp -</span></div>
@@ -747,7 +752,7 @@
       const indodaxSelect = document.getElementById("indodax-vip-level");
       const selectedIndodaxType = indodaxSelect ? indodaxSelect.value : "VIP";
 
-      // Database Fee Indodax (VIP bawaan kode lama vs Regular baru)
+      // Database Fee Indodax
       const indodaxFees = {
         "VIP":     { maker: 0.001111, taker: 0.002111 },
         "Regular": { maker: 0.002622, taker: 0.002922 }
@@ -769,10 +774,12 @@
       };
       const selectedTokoFee = tokocryptoFees[selectedVip] || tokocryptoFees["VIP9"];
 
+      // Konfigurasi Fee untuk masing-masing exchange (Reku Ditambahkan)
       const ratesConfig = { 
-        indodax: { makerFee: selectedIndodaxFee.maker, takerFee: selectedIndodaxFee.taker }, // Mengikuti Toggle Indodax
-        tokocrypto: { makerFee: selectedTokoFee.maker, takerFee: selectedTokoFee.taker }, // Mengikuti Toggle Tokocrypto
-        pintu: { makerFee: 0.001311, takerFee: 0.001811 } // Pintu bawaan awal tetap aman
+        reku: { makerFee: 0.001111, takerFee: 0.001111 }, // Fee 0.1111%
+        indodax: { makerFee: selectedIndodaxFee.maker, takerFee: selectedIndodaxFee.taker },
+        tokocrypto: { makerFee: selectedTokoFee.maker, takerFee: selectedTokoFee.taker },
+        pintu: { makerFee: 0.001311, takerFee: 0.001811 }
       };
 
       Object.keys(ratesConfig).forEach((key) => {
