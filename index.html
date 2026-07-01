@@ -270,16 +270,16 @@
 
         <div class="sim-footer-row">
           <div style="display: flex; align-items: center; gap: 8px;">
-            <label for="indodax-vip-level" style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">INDODAX Level:</label>
+            <label for="indodax-vip-level" style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">INDODAX:</label>
             <select id="indodax-vip-level" class="vip-toggle" onchange="calculateSimulatedRates();">
-              <option value="Regular">Regular</option>
-              <option value="VIP" selected>VIP</option>
+              <option value="Regular" selected>Regular</option>
+              <option value="VIP">VIP</option>
             </select>
           </div>
           <div style="display: flex; align-items: center; gap: 8px;">
-            <label for="tokocrypto-vip-level" style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">TOKO VIP Level:</label>
+            <label for="tokocrypto-vip-level" style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">Tokocrypto:</label>
             <select id="tokocrypto-vip-level" class="vip-toggle" onchange="calculateSimulatedRates();">
-              <option value="Regular">Regular</option>
+              <option value="Regular" selected>Regular</option>
               <option value="VIP1">VIP 1</option>
               <option value="VIP2">VIP 2</option>
               <option value="VIP3">VIP 3</option>
@@ -288,7 +288,7 @@
               <option value="VIP6">VIP 6</option>
               <option value="VIP7">VIP 7</option>
               <option value="VIP8">VIP 8</option>
-              <option value="VIP9" selected>VIP 9</option>
+              <option value="VIP9">VIP 9</option>
             </select>
           </div>
         </div>
@@ -744,22 +744,18 @@
       const cleanValue = sizeInput.value.replace(/\./g, "");
       const targetSize = parseFloat(cleanValue) || 0;
       
-      // Ambil level VIP terpilih dari toggle dropdown Tokocrypto
       const vipSelect = document.getElementById("tokocrypto-vip-level");
-      const selectedVip = vipSelect ? vipSelect.value : "VIP9";
+      const selectedVip = vipSelect ? vipSelect.value : "Regular";
 
-      // Ambil status tipe akun Indodax dari toggle dropdown Indodax
       const indodaxSelect = document.getElementById("indodax-vip-level");
-      const selectedIndodaxType = indodaxSelect ? indodaxSelect.value : "VIP";
+      const selectedIndodaxType = indodaxSelect ? indodaxSelect.value : "Regular";
 
-      // Database Fee Indodax
       const indodaxFees = {
         "VIP":     { maker: 0.001111, taker: 0.002111 },
         "Regular": { maker: 0.002622, taker: 0.002922 }
       };
       const selectedIndodaxFee = indodaxFees[selectedIndodaxType] || indodaxFees["VIP"];
 
-      // Database Fee Tokocrypto Berdasarkan Tabel Gambar Resmi
       const tokocryptoFees = {
         "Regular": { maker: 0.001222, taker: 0.002222 },
         "VIP1":    { maker: 0.001197, taker: 0.002172 },
@@ -774,7 +770,6 @@
       };
       const selectedTokoFee = tokocryptoFees[selectedVip] || tokocryptoFees["VIP9"];
 
-      // Konfigurasi Fee untuk masing-masing exchange (Reku Ditambahkan)
       const ratesConfig = { 
         reku: { makerFee: 0.001111, takerFee: 0.001111 }, // Fee 0.1111%
         indodax: { makerFee: selectedIndodaxFee.maker, takerFee: selectedIndodaxFee.taker },
