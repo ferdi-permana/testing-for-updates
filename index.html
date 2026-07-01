@@ -116,6 +116,7 @@
       align-items: center;
       margin-top: 12px;
       padding-top: 8px;
+      gap: 20px;
     }
     
     .theme-toggle { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; min-height: 36px; padding: 0 12px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin-right: 4px; }
@@ -192,7 +193,7 @@
       .sim-row { flex-direction: column; align-items: stretch; }
       .sim-results-wrapper { flex-wrap: wrap; justify-content: flex-start; }
       .sim-exchange-result { flex: 1; }
-      .sim-footer-row { justify-content: flex-start; }
+      .sim-footer-row { justify-content: flex-start; flex-direction: column; align-items: flex-start; gap: 10px; }
     }
     @media (max-width: 760px) {
       .book-grid { grid-template-columns: 1fr; }
@@ -263,6 +264,13 @@
         </div>
 
         <div class="sim-footer-row">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <label for="indodax-vip-level" style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">INDODAX Level:</label>
+            <select id="indodax-vip-level" class="vip-toggle" onchange="calculateSimulatedRates();">
+              <option value="Regular">Regular</option>
+              <option value="VIP" selected>VIP</option>
+            </select>
+          </div>
           <div style="display: flex; align-items: center; gap: 8px;">
             <label for="tokocrypto-vip-level" style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">TOKO VIP Level:</label>
             <select id="tokocrypto-vip-level" class="vip-toggle" onchange="calculateSimulatedRates();">
@@ -731,11 +739,22 @@
       const cleanValue = sizeInput.value.replace(/\./g, "");
       const targetSize = parseFloat(cleanValue) || 0;
       
-      // Ambil level VIP terpilih dari toggle dropdown
+      // Ambil level VIP terpilih dari toggle dropdown Tokocrypto
       const vipSelect = document.getElementById("tokocrypto-vip-level");
       const selectedVip = vipSelect ? vipSelect.value : "VIP9";
 
-      // Database Fee Tokocrypto Berdasarkan Tabel Gambar Resmi yang Anda Berikan
+      // Ambil status tipe akun Indodax dari toggle dropdown Indodax
+      const indodaxSelect = document.getElementById("indodax-vip-level");
+      const selectedIndodaxType = indodaxSelect ? indodaxSelect.value : "VIP";
+
+      // Database Fee Indodax (VIP bawaan kode lama vs Regular baru)
+      const indodaxFees = {
+        "VIP":     { maker: 0.001111, taker: 0.002111 },
+        "Regular": { maker: 0.002622, taker: 0.002922 }
+      };
+      const selectedIndodaxFee = indodaxFees[selectedIndodaxType] || indodaxFees["VIP"];
+
+      // Database Fee Tokocrypto Berdasarkan Tabel Gambar Resmi
       const tokocryptoFees = {
         "Regular": { maker: 0.001222, taker: 0.002222 },
         "VIP1":    { maker: 0.001197, taker: 0.002172 },
@@ -748,12 +767,11 @@
         "VIP8":    { maker: 0.000642, taker: 0.001122 },
         "VIP9":    { maker: 0.000582, taker: 0.001002 }
       };
-
       const selectedTokoFee = tokocryptoFees[selectedVip] || tokocryptoFees["VIP9"];
 
       const ratesConfig = { 
-        indodax: { makerFee: 0.001111, takerFee: 0.002111 }, // Indodax bawaan awal tetap aman
-        tokocrypto: { makerFee: selectedTokoFee.maker, takerFee: selectedTokoFee.taker }, // Mengikuti Toggle
+        indodax: { makerFee: selectedIndodaxFee.maker, takerFee: selectedIndodaxFee.taker }, // Mengikuti Toggle Indodax
+        tokocrypto: { makerFee: selectedTokoFee.maker, takerFee: selectedTokoFee.taker }, // Mengikuti Toggle Tokocrypto
         pintu: { makerFee: 0.001311, takerFee: 0.001811 } // Pintu bawaan awal tetap aman
       };
 
