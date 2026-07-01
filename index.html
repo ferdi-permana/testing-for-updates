@@ -51,7 +51,7 @@
 
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--ink); min-width: 320px; transition: background 0.2s ease, color 0.2s ease; }
-    button, input { font: inherit; }
+    button, input, select { font: inherit; }
     button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; min-height: 36px; padding: 0 12px; cursor: pointer; }
     button:hover { border-color: #9fb2c4; background: var(--surface-2); }
     button.primary { border-color: #245b87; background: #245b87; color: #ffffff; }
@@ -85,13 +85,20 @@
     .sim-input-wrapper { display: flex; flex-direction: column; gap: 6px; flex: 0 0 140px; }
     .sim-input-wrapper label { font-size: 11px; color: var(--muted); font-weight: 500; }
     .sim-input-wrapper input { width: 100%; min-height: 38px; font-weight: 700; font-size: 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); text-align: center; }
-    .sim-results-wrapper { display: flex; gap: 12px; flex: 1; justify-content: flex-end; }
+    .sim-results-wrapper { display: flex; gap: 12px; flex: 1; justify-content: flex-end; align-items: center; }
     .sim-exchange-result { background: var(--surface-2); border-radius: 6px; padding: 10px 14px; min-width: 175px; display: flex; flex-direction: column; gap: 4px; }
     .sim-ex-title { font-size: 11px; font-weight: 700; color: var(--muted); }
     .sim-rate-row { display: flex; justify-content: space-between; font-size: 12px; font-variant-numeric: tabular-nums; }
     .sim-rate-row .rate-val { font-weight: 700; }
     .sim-rate-row .rate-val.m { color: var(--buy); }
     .sim-rate-row .rate-val.t { color: var(--info); }
+    
+    /* Style komponen Dropdown VIP baru di area kotak merah */
+    .sim-vip-wrapper { display: flex; flex-direction: column; gap: 6px; width: 150px; margin-left: 4px; }
+    .sim-vip-wrapper label { font-size: 11px; color: var(--muted); font-weight: 500; text-transform: uppercase; letter-spacing: 0.02em; }
+    .sim-vip-select { width: 100%; min-height: 38px; font-weight: 700; font-size: 13px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface-2); color: var(--ink); padding: 0 8px; cursor: pointer; }
+    .sim-vip-select:focus { outline: none; border-color: #087f5b; }
+
     .theme-toggle { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; min-height: 36px; padding: 0 12px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin-right: 4px; }
     h2, h3 { margin: 0; letter-spacing: 0; }
     h2 { font-size: 18px; }
@@ -166,6 +173,7 @@
       .sim-row { flex-direction: column; align-items: stretch; }
       .sim-results-wrapper { flex-wrap: wrap; justify-content: flex-start; }
       .sim-exchange-result { flex: 1; }
+      .sim-vip-wrapper { width: 100%; margin-left: 0; margin-top: 4px; }
     }
     @media (max-width: 760px) {
       .book-grid { grid-template-columns: 1fr; }
@@ -229,6 +237,22 @@
               <span class="sim-ex-title" style="color: #00a896;">Pintu Pro</span>
               <div class="sim-rate-row"><span>Maker (M):</span> <span class="rate-val m" id="rate-m-pintu">Rp -</span></div>
               <div class="sim-rate-row"><span>Taker (T):</span> <span class="rate-val t" id="rate-t-pintu">Rp -</span></div>
+            </div>
+            
+            <div class="sim-vip-wrapper">
+              <label for="calc-toko-vip">Tokocrypto VIP</label>
+              <select id="calc-toko-vip" class="sim-vip-select" onchange="calculateSimulatedRates();">
+                <option value="reg">Reguler (0.12%)</option>
+                <option value="v1">VIP 1</option>
+                <option value="v2">VIP 2</option>
+                <option value="v3">VIP 3</option>
+                <option value="v4" selected>VIP 4</option>
+                <option value="v5">VIP 5</option>
+                <option value="v6">VIP 6</option>
+                <option value="v7">VIP 7</option>
+                <option value="v8">VIP 8</option>
+                <option value="v9">VIP 9</option>
+              </select>
             </div>
           </div>
         </div>
@@ -452,50 +476,31 @@
       return finalizeBook({ symbol: "USDT_IDR", bids, asks, fetchedAt: new Date() });
     }
 
-
-async function fetchJson(targetUrl) {
- 
-  const response = await fetch(`/proxy?url=${encodeURIComponent(targetUrl)}`, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`HTTP Error! Status: ${response.status}`);
-  }
-  return await response.json();
-}
-
-
-async function fetchTokocrypto() {
-  try {
-    // Menggunakan endpoint CDN publik alternatif yang kebal dari blokir IP server Anda
-    const url = "https://data-api.binance.vision/api/v3/depth?symbol=USDTIDR&limit=10";
-    
-    // Tembak langsung dari browser (Bebas CORS & Bebas Blokir Server)
-    const response = await fetch(url, { cache: "no-store" });
-    
-    if (!response.ok) {
-      throw new Error("Jalur alternatif mentah gagal");
+    async function fetchJson(targetUrl) {
+      const response = await fetch(`/proxy?url=${encodeURIComponent(targetUrl)}`, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`HTTP Error! Status: ${response.status}`);
+      }
+      return await response.json();
     }
-    
-    const data = await response.json();
-    
-    // Scrap dan petakan data mentah yang didapat ke fungsi dashboard Anda
-    const bids = normalizePriceQtySide(data.bids || [], "bid");
-    const asks = normalizePriceQtySide(data.asks || [], "ask");
-    
-    // Kembalikan data ASLI dan NYATA ke dashboard
-    return finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() });
-    
-  } catch (error) {
-    console.error("Gagal melakukan scraping data mentah alternatif:", error);
-    // Tampilkan status error jujur di tabel jika semua jalur mati
-    return {
-      symbol: "USDTIDR",
-      error: true,
-      bids: [],
-      asks: [],
-      fetchedAt: new Date()
-    };
-  }
-}
+
+    async function fetchTokocrypto() {
+      try {
+        const url = "https://data-api.binance.vision/api/v3/depth?symbol=USDTIDR&limit=10";
+        const response = await fetch(url, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error("Jalur alternatif mentah gagal");
+        }
+        const data = await response.json();
+        const bids = normalizePriceQtySide(data.bids || [], "bid");
+        const asks = normalizePriceQtySide(data.asks || [], "ask");
+        return finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() });
+      } catch (error) {
+        console.error("Gagal melakukan scraping data mentah alternatif:", error);
+        return { symbol: "USDTIDR", error: true, bids: [], asks: [], fetchedAt: new Date() };
+      }
+    }
+
     async function fetchIndodax() {
       const book = await fetchJsonWithCandidates(["https://indodax.com/api/depth/usdtidr", "https://indodax.com/api/depth/usdt_idr"]);
       const bids = normalizePriceQtySide(book.buy || book.bids || [], "bid");
@@ -523,12 +528,6 @@ async function fetchTokocrypto() {
 
       if (!usdMatch) throw new Error("Format USD e-Rate BCA tidak terbaca.");
       return { buy: parseLocaleNumber(usdMatch[1]), sell: parseLocaleNumber(usdMatch[2]), updatedAtText: updateMatch ? normalizeSpace(updateMatch[1]) : "BCA Live", fetchedAt: new Date() };
-    }
-
-    async function fetchJson(url) {
-      const response = await fetchRemote(url, "application/json");
-      if (!response.ok) throw new Error(`${response.status} dari ${new URL(url).hostname}`);
-      return response.json();
     }
 
     async function fetchText(url) {
@@ -682,11 +681,9 @@ async function fetchTokocrypto() {
           return;
         }
 
-        // Ambil data visual ketat hanya 10 baris teratas saja untuk semua bursa
         const finalBids = (data.bids || []).slice(0, 10);
         const finalAsks = (data.asks || []).slice(0, 10);
 
-        // Rumus total volume matematika murni dihitung dari 10 data di atas
         const totalBidVolIdr = finalBids.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
         const totalAskVolIdr = finalAsks.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
 
@@ -708,14 +705,32 @@ async function fetchTokocrypto() {
 
     function calculateSimulatedRates() {
       const sizeInput = document.getElementById("calc-usdt-size");
-      if (!sizeInput) return;
+      const vipSelect = document.getElementById("calc-toko-vip");
+      if (!sizeInput || !vipSelect) return;
       
       const cleanValue = sizeInput.value.replace(/\./g, "");
       const targetSize = parseFloat(cleanValue) || 0;
       
+      // Kumpulan data fee Tokocrypto berdasarkan tabel penugasan (termasuk Pajak dan CFX)
+      const tokocryptoVipMap = {
+        reg: { makerFee: 0.001222, takerFee: 0.002222 },
+        v1:  { makerFee: 0.001197, takerFee: 0.002172 },
+        v2:  { makerFee: 0.001172, takerFee: 0.002122 },
+        v3:  { makerFee: 0.001122, takerFee: 0.002022 },
+        v4:  { makerFee: 0.001022, takerFee: 0.001822 },
+        v5:  { makerFee: 0.000922, takerFee: 0.001622 },
+        v6:  { makerFee: 0.000722, takerFee: 0.001242 },
+        v7:  { makerFee: 0.000682, takerFee: 0.001172 },
+        v8:  { makerFee: 0.000642, takerFee: 0.001122 },
+        v9:  { makerFee: 0.000582, takerFee: 0.001002 }
+      };
+
+      const selectedVipKey = vipSelect.value;
+      const currentTokocryptoFee = tokocryptoVipMap[selectedVipKey] || tokocryptoVipMap.reg;
+
       const ratesConfig = { 
         indodax: { makerFee: 0.000111, takerFee: 0.001111 }, 
-        tokocrypto: { makerFee: 0.001111, takerFee: 0.002111 }, 
+        tokocrypto: currentTokocryptoFee, // Isolasi pengaruh hanya ke Tokocrypto
         pintu: { makerFee: 0.001311, takerFee: 0.001811 } 
       };
 
