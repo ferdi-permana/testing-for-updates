@@ -90,6 +90,8 @@
     .sim-input-wrapper select { text-align-last: center; font-weight: 600; }
     .sim-results-wrapper { display: flex; gap: 12px; flex: 1; justify-content: flex-end; }
     .sim-exchange-result { background: var(--surface-2); border-radius: 6px; padding: 10px 14px; min-width: 175px; display: flex; flex-direction: column; gap: 4px; }
+    .sim-select-wrapper { margin-top: 4px; padding-top: 6px; border-top: 1px dashed var(--line); }
+    .sim-select-wrapper select { width: 100%; min-height: 26px; height: 26px; font-size: 11px; font-weight: 600; padding: 0 4px; text-align-last: center; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); }
     .sim-ex-title { font-size: 11px; font-weight: 700; color: var(--muted); }
     .sim-rate-row { display: flex; justify-content: space-between; font-size: 12px; font-variant-numeric: tabular-nums; }
     .sim-rate-row .rate-val { font-weight: 700; }
@@ -219,39 +221,42 @@
               <label for="calc-usdt-size">Ukuran Beli (USDT)</label>
               <input type="text" id="calc-usdt-size" value="100" oninput="formatNumberInput(this); calculateSimulatedRates();">
             </div>
-            <div class="sim-input-wrapper">
-              <label for="lvl-indodax">Level Indodax</label>
-              <select id="lvl-indodax" onchange="calculateSimulatedRates();">
-                <option value="regular">Regular</option>
-                <option value="vip">VIP</option>
-              </select>
-            </div>
-            <div class="sim-input-wrapper">
-              <label for="lvl-tokocrypto">Level Tokocrypto</label>
-              <select id="lvl-tokocrypto" onchange="calculateSimulatedRates();">
-                <option value="regular">Regular</option>
-                <option value="vip1">VIP 1</option>
-                <option value="vip2">VIP 2</option>
-                <option value="vip3">VIP 3</option>
-                <option value="vip4">VIP 4</option>
-                <option value="vip5">VIP 5</option>
-                <option value="vip6">VIP 6</option>
-                <option value="vip7">VIP 7</option>
-                <option value="vip8">VIP 8</option>
-                <option value="vip9">VIP 9</option>
-              </select>
-            </div>
           </div>
           <div class="sim-results-wrapper">
+            <div class="sim-exchange-result">
+              <span class="sim-ex-title" style="color: #704fea;">Reku</span>
+              <div class="sim-rate-row"><span>Maker (M):</span> <span class="rate-val m" id="rate-m-reku">Rp -</span></div>
+              <div class="sim-rate-row"><span>Taker (T):</span> <span class="rate-val t" id="rate-t-reku">Rp -</span></div>
+            </div>
             <div class="sim-exchange-result">
               <span class="sim-ex-title" style="color: #2f6f9f;">Indodax</span>
               <div class="sim-rate-row"><span>Maker (M):</span> <span class="rate-val m" id="rate-m-indodax">Rp -</span></div>
               <div class="sim-rate-row"><span>Taker (T):</span> <span class="rate-val t" id="rate-t-indodax">Rp -</span></div>
+              <div class="sim-select-wrapper">
+                <select id="lvl-indodax" onchange="calculateSimulatedRates();">
+                  <option value="regular">Regular</option>
+                  <option value="vip">VIP</option>
+                </select>
+              </div>
             </div>
             <div class="sim-exchange-result">
               <span class="sim-ex-title" style="color: #087f5b;">Tokocrypto</span>
               <div class="sim-rate-row"><span>Maker (M):</span> <span class="rate-val m" id="rate-m-tokocrypto">Rp -</span></div>
               <div class="sim-rate-row"><span>Taker (T):</span> <span class="rate-val t" id="rate-t-tokocrypto">Rp -</span></div>
+              <div class="sim-select-wrapper">
+                <select id="lvl-tokocrypto" onchange="calculateSimulatedRates();">
+                  <option value="regular">Regular</option>
+                  <option value="vip1">VIP 1</option>
+                  <option value="vip2">VIP 2</option>
+                  <option value="vip3">VIP 3</option>
+                  <option value="vip4">VIP 4</option>
+                  <option value="vip5">VIP 5</option>
+                  <option value="vip6">VIP 6</option>
+                  <option value="vip7">VIP 7</option>
+                  <option value="vip8">VIP 8</option>
+                  <option value="vip9">VIP 9</option>
+                </select>
+              </div>
             </div>
             <div class="sim-exchange-result">
               <span class="sim-ex-title" style="color: #00a896;">Pintu Pro</span>
@@ -669,10 +674,10 @@
     function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
 
     function initTheme() { 
-  if ((localStorage.getItem("theme") || "light") === "dark") { 
-    document.documentElement.setAttribute("data-theme", "dark"); updateThemeUI(true); 
-  } 
-}
+      if ((localStorage.getItem("theme") || "light") === "dark") { 
+        document.documentElement.setAttribute("data-theme", "dark"); updateThemeUI(true); 
+      } 
+    }
     function toggleTheme() {
       const isDark = document.documentElement.getAttribute("data-theme") === "dark";
       const nextDark = !isDark;
@@ -734,6 +739,7 @@
       const selectedTokocryptoLvl = document.getElementById("lvl-tokocrypto")?.value || "regular";
 
       const ratesConfig = { 
+        reku: { makerFee: 0.0010, takerFee: 0.0010 },
         indodax: IndodaxLevel[selectedIndodaxLvl], 
         tokocrypto: TokocryptoLevel[selectedTokocryptoLvl], 
         pintu: { makerFee: 0.001311, takerFee: 0.001811 } 
