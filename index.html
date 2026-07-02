@@ -52,22 +52,11 @@
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--ink); min-width: 320px; transition: background 0.2s ease, color 0.2s ease; }
     button, input, select { font: inherit; }
-    button, select { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; min-height: 36px; padding: 0 12px; cursor: pointer; }
-    button:hover, select:hover { border-color: #9fb2c4; background: var(--surface-2); }
+    button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; min-height: 36px; padding: 0 12px; cursor: pointer; }
+    button:hover { border-color: #9fb2c4; background: var(--surface-2); }
     button.primary { border-color: #245b87; background: #245b87; color: #ffffff; }
-    input { width: 160px; max-width: 100%; min-height: 36px; border: 1px solid var(--line); border-radius: 6px; padding: 0 10px; color: var(--ink); background: var(--surface); }
-    
-    select.vip-toggle {
-      min-height: 32px;
-      height: 32px;
-      padding: 0 8px;
-      font-size: 12px;
-      font-weight: 600;
-      border-radius: 4px;
-      background-color: var(--surface);
-      color: var(--ink);
-    }
-
+    input, select { width: 160px; max-width: 100%; min-height: 36px; border: 1px solid var(--line); border-radius: 6px; padding: 0 10px; color: var(--ink); background: var(--surface); }
+    select { cursor: pointer; padding-right: 24px; }
     .page { width: min(1600px, 100%); margin: 0 auto; padding: 24px; }
     .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 22px; }
     h1 { margin: 0 0 6px; font-size: clamp(24px, 3vw, 38px); line-height: 1.1; letter-spacing: 0; }
@@ -79,13 +68,11 @@
     .delayed .status-dot, .status-dot.delayed { background: var(--warn); }
     .error .status-dot, .status-dot.error { background: var(--sell); }
     .grid { display: grid; gap: 16px; }
-    
     .snapshot-grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 16px; margin-bottom: 24px; align-items: stretch; }
     .panel, .simulator-panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
     .panel { padding: 16px; }
     .bca-panel { grid-column: span 4; }
     .simulator-panel { grid-column: span 8; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; }
-    
     .metric-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
     .bca-rate-grid { display: flex; gap: 24px; margin: 12px 0; }
     .bca-rate-item { display: flex; flex-direction: column; gap: 2px; }
@@ -94,29 +81,20 @@
     .bca-rate-number.trend-buy { color: var(--buy); }
     .bca-rate-number.trend-sell { color: var(--sell); }
     .meta { font-size: 11px; color: var(--muted); }
-    
     .sim-header { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
     .sim-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 100%; }
-    .sim-input-wrapper { display: flex; flex-direction: column; gap: 6px; flex: 0 0 140px; }
+    .sim-controls { display: flex; flex-direction: column; gap: 10px; flex: 0 0 180px; }
+    .sim-input-wrapper { display: flex; flex-direction: column; gap: 4px; }
     .sim-input-wrapper label { font-size: 11px; color: var(--muted); font-weight: 500; }
-    .sim-input-wrapper input { width: 100%; min-height: 38px; font-weight: 700; font-size: 14px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); text-align: center; }
+    .sim-input-wrapper input, .sim-input-wrapper select { width: 100%; min-height: 36px; font-weight: 700; font-size: 13px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); text-align: center; }
+    .sim-input-wrapper select { text-align-last: center; font-weight: 600; }
     .sim-results-wrapper { display: flex; gap: 12px; flex: 1; justify-content: flex-end; }
-    .sim-exchange-result { background: var(--surface-2); border-radius: 6px; padding: 10px 14px; min-width: 145px; display: flex; flex-direction: column; gap: 4px; }
+    .sim-exchange-result { background: var(--surface-2); border-radius: 6px; padding: 10px 14px; min-width: 175px; display: flex; flex-direction: column; gap: 4px; }
     .sim-ex-title { font-size: 11px; font-weight: 700; color: var(--muted); }
     .sim-rate-row { display: flex; justify-content: space-between; font-size: 12px; font-variant-numeric: tabular-nums; }
     .sim-rate-row .rate-val { font-weight: 700; }
     .sim-rate-row .rate-val.m { color: var(--buy); }
     .sim-rate-row .rate-val.t { color: var(--info); }
-    
-    .sim-footer-row {
-      display: flex;
-      justify-content: flex-end;
-      align-items: center;
-      margin-top: 12px;
-      padding-top: 8px;
-      gap: 20px;
-    }
-    
     .theme-toggle { background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; min-height: 36px; padding: 0 12px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; margin-right: 4px; }
     h2, h3 { margin: 0; letter-spacing: 0; }
     h2 { font-size: 18px; }
@@ -189,9 +167,9 @@
       .bca-panel, .simulator-panel { grid-column: span 12; }
       .book-grid { grid-template-columns: repeat(2, 1fr); }
       .sim-row { flex-direction: column; align-items: stretch; }
+      .sim-controls { flex: 0 0 auto; }
       .sim-results-wrapper { flex-wrap: wrap; justify-content: flex-start; }
       .sim-exchange-result { flex: 1; }
-      .sim-footer-row { justify-content: flex-start; flex-direction: column; align-items: flex-start; gap: 10px; }
     }
     @media (max-width: 760px) {
       .book-grid { grid-template-columns: 1fr; }
@@ -235,19 +213,36 @@
 
       <div class="simulator-panel">
         <div class="sim-header">Simulasi Beli USDT (Harga Bersih)</div>
-        
         <div class="sim-row">
-          <div class="sim-input-wrapper">
-            <label for="calc-usdt-size">Ukuran Beli (USDT)</label>
-            <input type="text" id="calc-usdt-size" value="100" oninput="formatNumberInput(this); calculateSimulatedRates();">
-          </div>
-          
-          <div class="sim-results-wrapper">
-            <div class="sim-exchange-result">
-              <span class="sim-ex-title" style="color: #704fea;">Reku</span>
-              <div class="sim-rate-row"><span>Maker (M):</span> <span class="rate-val m" id="rate-m-reku">Rp -</span></div>
-              <div class="sim-rate-row"><span>Taker (T):</span> <span class="rate-val t" id="rate-t-reku">Rp -</span></div>
+          <div class="sim-controls">
+            <div class="sim-input-wrapper">
+              <label for="calc-usdt-size">Ukuran Beli (USDT)</label>
+              <input type="text" id="calc-usdt-size" value="100" oninput="formatNumberInput(this); calculateSimulatedRates();">
             </div>
+            <div class="sim-input-wrapper">
+              <label for="lvl-indodax">Level Indodax</label>
+              <select id="lvl-indodax" onchange="calculateSimulatedRates();">
+                <option value="regular">Regular</option>
+                <option value="vip">VIP</option>
+              </select>
+            </div>
+            <div class="sim-input-wrapper">
+              <label for="lvl-tokocrypto">Level Tokocrypto</label>
+              <select id="lvl-tokocrypto" onchange="calculateSimulatedRates();">
+                <option value="regular">Regular</option>
+                <option value="vip1">VIP 1</option>
+                <option value="vip2">VIP 2</option>
+                <option value="vip3">VIP 3</option>
+                <option value="vip4">VIP 4</option>
+                <option value="vip5">VIP 5</option>
+                <option value="vip6">VIP 6</option>
+                <option value="vip7">VIP 7</option>
+                <option value="vip8">VIP 8</option>
+                <option value="vip9">VIP 9</option>
+              </select>
+            </div>
+          </div>
+          <div class="sim-results-wrapper">
             <div class="sim-exchange-result">
               <span class="sim-ex-title" style="color: #2f6f9f;">Indodax</span>
               <div class="sim-rate-row"><span>Maker (M):</span> <span class="rate-val m" id="rate-m-indodax">Rp -</span></div>
@@ -265,32 +260,6 @@
             </div>
           </div>
         </div>
-
-        <div class="sim-footer-row">
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <label for="indodax-vip-level" style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">INDODAX Level:</label>
-            <select id="indodax-vip-level" class="vip-toggle" onchange="calculateSimulatedRates();">
-              <option value="Regular" selected>Regular</option>
-              <option value="VIP">VIP</option>
-            </select>
-          </div>
-          <div style="display: flex; align-items: center; gap: 8px;">
-            <label for="tokocrypto-vip-level" style="font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase;">TOKO VIP Level:</label>
-            <select id="tokocrypto-vip-level" class="vip-toggle" onchange="calculateSimulatedRates();">
-              <option value="Regular" selected>Regular</option>
-              <option value="VIP1">VIP 1</option>
-              <option value="VIP2">VIP 2</option>
-              <option value="VIP3">VIP 3</option>
-              <option value="VIP4">VIP 4</option>
-              <option value="VIP5">VIP 5</option>
-              <option value="VIP6">VIP 6</option>
-              <option value="VIP7">VIP 7</option>
-              <option value="VIP8">VIP 8</option>
-              <option value="VIP9">VIP 9</option>
-            </select>
-          </div>
-        </div>
-
       </div>
     </section>
 
@@ -308,6 +277,24 @@
   <script>
     const REFRESH_SECONDS = 300;
     const REQUEST_TIMEOUT_MS = 14000;
+    
+    const IndodaxLevel = {
+      regular: { makerFee: 0.002622, takerFee: 0.002922 },
+      vip:     { makerFee: 0.002322, takerFee: 0.002622 }
+    };
+
+    const TokocryptoLevel = {
+      regular: { makerFee: 0.001222, takerFee: 0.002222 },
+      vip1:    { makerFee: 0.001197, takerFee: 0.002172 },
+      vip2:    { makerFee: 0.001172, takerFee: 0.002122 },
+      vip3:    { makerFee: 0.001122, takerFee: 0.002022 },
+      vip4:    { makerFee: 0.001022, takerFee: 0.001822 },
+      vip5:    { makerFee: 0.000922, takerFee: 0.001622 },
+      vip6:    { makerFee: 0.000722, takerFee: 0.001242 },
+      vip7:    { makerFee: 0.000682, takerFee: 0.001172 },
+      vip8:    { makerFee: 0.000642, takerFee: 0.001122 },
+      vip9:    { makerFee: 0.000582, takerFee: 0.001002 }
+    };
 
     const state = {
       exchanges: {},
@@ -490,7 +477,7 @@
       exchangeConfigs.forEach((config) => {
         const data = state.exchanges[config.key];
         const status = getSourceStatus(data);
-        updateStatusPill(document.querySelector("#source-" + config.key + " .pill"), status.kind, status.text);
+        updateStatusPill(document.querySelector(`#source-${config.key} .pill`), status.kind, status.text);
         setText(`source-${config.key}-latest`, `Latest: ${latestText(data)}`);
         setText(`source-${config.key}-fetched`, `Fetched: ${data?.fetchedAt ? formatDateTime(data.fetchedAt) : "-"}`);
         setText(`source-${config.key}-age`, `Age: ${data?.fetchedAt ? relativeAge(data.fetchedAt) : "-"}`);
@@ -511,6 +498,14 @@
       return finalizeBook({ symbol: "USDT_IDR", bids, asks, fetchedAt: new Date() });
     }
 
+    async function fetchJson(targetUrl) {
+      const response = await fetch(`/proxy?url=${encodeURIComponent(targetUrl)}`, { cache: "no-store" });
+      if (!response.ok) {
+        throw new Error(`HTTP Error! Status: ${response.status}`);
+      }
+      return await response.json();
+    }
+
     async function fetchTokocrypto() {
       try {
         const url = "https://data-api.binance.vision/api/v3/depth?symbol=USDTIDR&limit=10";
@@ -521,7 +516,7 @@
         const asks = normalizePriceQtySide(data.asks || [], "ask");
         return finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() });
       } catch (error) {
-        console.error("Gagal memuat Tokocrypto:", error);
+        console.error("Gagal melakukan scraping data mentah alternatif:", error);
         return { symbol: "USDTIDR", error: true, bids: [], asks: [], fetchedAt: new Date() };
       }
     }
@@ -553,12 +548,6 @@
 
       if (!usdMatch) throw new Error("Format USD e-Rate BCA tidak terbaca.");
       return { buy: parseLocaleNumber(usdMatch[1]), sell: parseLocaleNumber(usdMatch[2]), updatedAtText: updateMatch ? normalizeSpace(updateMatch[1]) : "BCA Live", fetchedAt: new Date() };
-    }
-
-    async function fetchJson(url) {
-      const response = await fetchRemote(url, "application/json");
-      if (!response.ok) throw new Error(`${response.status} dari ${new URL(url).hostname}`);
-      return response.json();
     }
 
     async function fetchText(url) {
@@ -679,8 +668,7 @@
     function normalizeSpace(text) { return String(text || "").replace(/\s+/g, " ").trim(); }
     function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
 
-    initTheme();
-    function initTheme() { 
+    initTheme() { 
       if ((localStorage.getItem("theme") || "light") === "dark") { 
         document.documentElement.setAttribute("data-theme", "dark"); updateThemeUI(true); 
       } 
@@ -741,40 +729,14 @@
       
       const cleanValue = sizeInput.value.replace(/\./g, "");
       const targetSize = parseFloat(cleanValue) || 0;
-      
 
-      const vipSelect = document.getElementById("tokocrypto-vip-level");
-      const selectedVip = vipSelect ? vipSelect.value : "Regular";
-
-  
-      const indodaxSelect = document.getElementById("indodax-vip-level");
-      const selectedIndodaxType = indodaxSelect ? indodaxSelect.value : "Regular";
-
-      const indodaxFees = {
-        "Regular": { maker: 0.002622, taker: 0.002922 },
-        "VIP":     { maker: 0.002322, taker: 0.002622 } 
-      };
-      const selectedIndodaxFee = indodaxFees[selectedIndodaxType] || indodaxFees["Regular"];
-
-      const tokocryptoFees = {
-        "Regular": { maker: 0.001222, taker: 0.002222 },
-        "VIP1":    { maker: 0.001197, taker: 0.002172 },
-        "VIP2":    { maker: 0.001172, taker: 0.002122 },
-        "VIP3":    { maker: 0.001122, taker: 0.002022 },
-        "VIP4":    { maker: 0.001022, taker: 0.001822 },
-        "VIP5":    { maker: 0.000922, taker: 0.001622 },
-        "VIP6":    { maker: 0.000722, taker: 0.001242 },
-        "VIP7":    { maker: 0.000682, taker: 0.001172 },
-        "VIP8":    { maker: 0.000642, taker: 0.001122 },
-        "VIP9":    { maker: 0.000582, taker: 0.001002 }
-      };
-      const selectedTokoFee = tokocryptoFees[selectedVip] || tokocryptoFees["Regular"];
+      const selectedIndodaxLvl = document.getElementById("lvl-indodax")?.value || "regular";
+      const selectedTokocryptoLvl = document.getElementById("lvl-tokocrypto")?.value || "regular";
 
       const ratesConfig = { 
-        reku: { makerFee: 0.001111, takerFee: 0.001111 }, 
-        indodax: { makerFee: selectedIndodaxFee.maker, takerFee: selectedIndodaxFee.taker },
-        tokocrypto: { makerFee: selectedTokoFee.maker, takerFee: selectedTokoFee.taker },
-        pintu: { makerFee: 0.001311, takerFee: 0.001811 }
+        indodax: IndodaxLevel[selectedIndodaxLvl], 
+        tokocrypto: TokocryptoLevel[selectedTokocryptoLvl], 
+        pintu: { makerFee: 0.001311, takerFee: 0.001811 } 
       };
 
       Object.keys(ratesConfig).forEach((key) => {
