@@ -751,28 +751,24 @@
         } else { mEl.textContent = "Rp -"; }
 
         let remainingSize = targetSize;
-        let totalCostIdr = 0;
-        let totalFilledUsdt = 0;
+        let lastHitPrice = null;
 
         for (const order of data.asks) {
-          const price = Number(order.price || 0); 
+          const price = Number(order.price || 0);
           const qty = Number(order.qty || 0);
           if (price <= 0 || qty <= 0) continue;
 
-          const takeQty = Math.min(qty, remainingSize);
-          totalCostIdr += takeQty * price;
-          totalFilledUsdt += takeQty;
-          remainingSize -= takeQty;
+          lastHitPrice = price;
+          remainingSize -= Math.min(qty, remainingSize);
 
           if (remainingSize <= 0) break;
         }
-        
-        if (totalFilledUsdt > 0) {
-          const vwapPrice = totalCostIdr / totalFilledUsdt;
-          const effectiveTakerPrice = vwapPrice * (1 + config.takerFee);
+
+        if (lastHitPrice && !isNaN(lastHitPrice)) {
+          const effectiveTakerPrice = lastHitPrice * (1 + config.takerFee);
 
           if (remainingSize > 0) {
-            tEl.innerHTML = `Rp ${Math.ceil(effectiveTakerPrice).toLocaleString("id-ID")} <small style="color:var(--warn); font-size:9px;">(Sisa ${Math.round(remainingSize)} USDT)</small>`;
+            tEl.innerHTML = `Rp ${Math.ceil(effectiveTakerPrice).toLocaleString("id-ID")} <small style="color:var(--warn); font-size:9px;">(Sisa ${Math.round(remainingSize)} USDT, book habis)</small>`;
           } else {
             tEl.textContent = "Rp " + Math.ceil(effectiveTakerPrice).toLocaleString("id-ID");
           }
