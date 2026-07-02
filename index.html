@@ -668,11 +668,11 @@
     function normalizeSpace(text) { return String(text || "").replace(/\s+/g, " ").trim(); }
     function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
 
-    initTheme() { 
-      if ((localStorage.getItem("theme") || "light") === "dark") { 
-        document.documentElement.setAttribute("data-theme", "dark"); updateThemeUI(true); 
-      } 
-    }
+    function initTheme() { 
+  if ((localStorage.getItem("theme") || "light") === "dark") { 
+    document.documentElement.setAttribute("data-theme", "dark"); updateThemeUI(true); 
+  } 
+}
     function toggleTheme() {
       const isDark = document.documentElement.getAttribute("data-theme") === "dark";
       const nextDark = !isDark;
