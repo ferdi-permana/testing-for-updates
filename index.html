@@ -230,11 +230,8 @@
               <div class="sim-rate-row"><span>Taker (T):</span> <span class="rate-val t" id="rate-t-indodax">Rp -</span></div>
               <div class="sim-select-wrapper">
                 <select id="level-indodax" onchange="calculateSimulatedRates()">
-                  <option value="reguler">Regular (M: 0.1%, T: 0.2%)</option>
-                  <option value="vip1">VIP 1 (M: 0.0975%, T: 0.195%)</option>
-                  <option value="vip2">VIP 2 (M: 0.095%, T: 0.19%)</option>
-                  <option value="vip3">VIP 3 (M: 0.09%, T: 0.18%)</option>
-                  <option value="vip4">VIP 4 (M: 0.08%, T: 0.16%)</option>
+                  <option value="regular">Regular</option>
+                  <option value="vip">VIP</option>
                 </select>
               </div>
             </div>
@@ -244,10 +241,16 @@
               <div class="sim-rate-row"><span>Taker (T):</span> <span class="rate-val t" id="rate-t-tokocrypto">Rp -</span></div>
               <div class="sim-select-wrapper">
                 <select id="level-tokocrypto" onchange="calculateSimulatedRates()">
-                  <option value="reguler">Regular (M: 0.1%, T: 0.1%)</option>
-                  <option value="vip1">VIP 1 (M: 0.09%, T: 0.09%)</option>
-                  <option value="vip2">VIP 2 (M: 0.08%, T: 0.08%)</option>
-                  <option value="vip3">VIP 3 (M: 0.07%, T: 0.07%)</option>
+                  <option value="reguler">Regular</option>
+                  <option value="vip1">VIP 1</option>
+                  <option value="vip2">VIP 2</option>
+                  <option value="vip3">VIP 3</option>
+                  <option value="vip4">VIP 4</option>
+                  <option value="vip5">VIP 5</option>
+                  <option value="vip6">VIP 6</option>
+                  <option value="vip7">VIP 7</option>
+                  <option value="vip8">VIP 8</option>
+                  <option value="vip9">VIP 9</option>
                 </select>
               </div>
             </div>
@@ -433,6 +436,30 @@
       renderBca();
       renderSourceAges();
       calculateSimulatedRates();
+    }
+
+    function renderExchanges() {
+      exchangeConfigs.forEach((config) => {
+        const data = state.exchanges[config.key];
+        const bids = data?.bids || [];
+        const asks = data?.asks || [];
+        
+        setBookRows(`${config.key}-bids`, bids.slice(0, 10), "bid");
+        setBookRows(`${config.key}-asks`, asks.slice(0, 10), "ask");
+
+        const totalBidVol = bids.reduce((acc, cur) => acc + (cur.qty || 0), 0);
+        const totalAskVol = asks.reduce((acc, cur) => acc + (cur.qty || 0), 0);
+        
+        const bidVolEl = document.getElementById(`${config.key}-total-bid-vol`);
+        const askVolEl = document.getElementById(`${config.key}-total-ask-vol`);
+        const spreadEl = document.getElementById(`${config.key}-spread`);
+
+        if (bidVolEl) bidVolEl.textContent = fmtNumber(totalBidVol);
+        if (askVolEl) askVolEl.textContent = fmtNumber(totalAskVol);
+        if (spreadEl) {
+          spreadEl.textContent = data?.spread && data.spread > 0 ? fmtIdr(data.spread) : "Rp -";
+        }
+      });
     }
 
     function renderBca() {
@@ -637,69 +664,38 @@
       if (value == null || !isFinite(value)) return "-";
       return new Intl.NumberFormat("id-ID", { maximumFractionDigits: value < 1 ? 6 : 2 }).format(value);
     }
-    function formatDateTime(v) { return new Intl.DateTimeFormat("id-ID", { dateStyle: "short", timeStyle: "medium", timeZone: "Asia/Jakarta" }).format(new Date(v)); }
-    function formatTime(v) { return new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Asia/Jakarta" }).format(new Date(v)); }
-    function parseLocaleNumber(v) {
-      const t = String(v).trim();
-      if (t.includes(".") && t.includes(",")) return Number(t.replace(/\./g, "").replace(",", "."));
-      if (t.includes(",")) return Number(t.replace(/,/g, "")); return Number(t);
+    
+    function formatTime(date) {
+      return new Intl.DateTimeFormat("id-ID", { timeStyle: "medium" }).format(date);
     }
-    function normalizeSpace(text) { return String(text || "").replace(/\s+/g, " ").trim(); }
+    function normalizeSpace(str) { return (str || "").replace(/\s+/g, " ").trim(); }
+    function parseLocaleNumber(stringNumber) {
+      return parseFloat(stringNumber.replace(/\./g, "").replace(",", "."));
+    }
     function setText(id, text) { const el = document.getElementById(id); if (el) el.textContent = text; }
 
-    function initTheme() { 
-      if ((localStorage.getItem("theme") || "light") === "dark") { 
-        document.documentElement.setAttribute("data-theme", "dark"); updateThemeUI(true); 
-      } 
+    function initTheme() {
+      const saved = localStorage.getItem("theme");
+      if (saved === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+        document.getElementById("theme-icon").textContent = "☀️";
+        document.getElementById("theme-text").textContent = "Mode Terang";
+      }
     }
+
     function toggleTheme() {
       const isDark = document.documentElement.getAttribute("data-theme") === "dark";
-      const nextDark = !isDark;
-      document.documentElement.setAttribute("data-theme", nextDark ? "dark" : "light");
-      localStorage.setItem("theme", nextDark ? "dark" : "light");
-      updateThemeUI(nextDark);
-      setTimeout(() => { if (typeof renderExchanges === "function") renderExchanges(); }, 10);
-    }
-    function updateThemeUI(isDark) {
-      const icon = document.getElementById("theme-icon"); const text = document.getElementById("theme-text");
-      if (icon) icon.textContent = isDark ? "☀️" : "🌙"; if (text) text.textContent = isDark ? "Mode Terang" : "Mode Gelap"; 
-    }
-
-    function renderExchanges() {
-      exchangeConfigs.forEach((config) => {
-        const data = state.exchanges[config.key];
-        
-        if (!data || data.error) {
-          setText(`${config.key}-total-bid-vol`, "-");
-          setText(`${config.key}-total-ask-vol`, "-");
-          setText(`${config.key}-spread`, "-");
-          const bEl = document.getElementById(`${config.key}-bids`);
-          const aEl = document.getElementById(`${config.key}-asks`);
-          if (bEl) bEl.innerHTML = `<tr><td colspan="4" style="color:var(--sell); text-align:center;">Gagal Memuat Data</td></tr>`;
-          if (aEl) aEl.innerHTML = `<tr><td colspan="4" style="color:var(--sell); text-align:center;">Gagal Memuat Data</td></tr>`;
-          return;
-        }
-
-        const finalBids = (data.bids || []).slice(0, 10);
-        const finalAsks = (data.asks || []).slice(0, 10);
-
-        const totalBidVolIdr = finalBids.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
-        const totalAskVolIdr = finalAsks.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
-
-        const ringkasAngka = (num) => {
-          if (!num || isNaN(num)) return "-";
-          if (num >= 1e9) return (num / 1e9).toLocaleString("id-ID", { maximumFractionDigits: 1 }) + " M";
-          if (num >= 1e6) return (num / 1e6).toLocaleString("id-ID", { maximumFractionDigits: 1 }) + " jt";
-          return num.toLocaleString("id-ID");
-        };
-
-        setText(`${config.key}-total-bid-vol`, totalBidVolIdr > 0 ? ringkasAngka(totalBidVolIdr) : "-");
-        setText(`${config.key}-total-ask-vol`, totalAskVolIdr > 0 ? ringkasAngka(totalAskVolIdr) : "-");
-        setText(`${config.key}-spread`, data.spread != null ? fmtIdr(data.spread) : "-");
-        
-        setBookRows(`${config.key}-bids`, finalBids, "bid");
-        setBookRows(`${config.key}-asks`, finalAsks, "ask");
-      });
+      if (isDark) {
+        document.documentElement.removeAttribute("data-theme");
+        localStorage.setItem("theme", "light");
+        document.getElementById("theme-icon").textContent = "🌙";
+        document.getElementById("theme-text").textContent = "Mode Gelap";
+      } else {
+        document.documentElement.setAttribute("data-theme", "dark");
+        localStorage.setItem("theme", "dark");
+        document.getElementById("theme-icon").textContent = "☀️";
+        document.getElementById("theme-text").textContent = "Mode Terang";
+      }
     }
 
     function calculateSimulatedRates() {
@@ -730,9 +726,8 @@
         vip9: { makerFee: 0.000582, takerFee: 0.001002 }
       };
       
-      // Pemetaan konfigurasi berdasarkan pilihan database tingkatan level secara tepat
       const ratesConfig = { 
-        reku: { makerFee: 0.0000, takerFee: 0.0010 },
+        reku: { makerFee: 0.0010, takerFee: 0.0010 },
         indodax: IndodaxLevel[idxLevel] || IndodaxLevel.regular, 
         tokocrypto: TokocryptoLevel[tkoLevel] || TokocryptoLevel.reguler, 
         pintu: { makerFee: 0.0013, takerFee: 0.0018 }
@@ -785,13 +780,9 @@
       });
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const inputEl = document.getElementById("calc-usdt-size");
-      if (inputEl) {
-        inputEl.addEventListener("input", calculateSimulatedRates);
-        inputEl.addEventListener("change", calculateSimulatedRates);
-      }
-    });
+    function formatDateTime(v) { 
+      return new Intl.DateTimeFormat("id-ID", { dateStyle: "short", timeStyle: "medium" }).format(v); 
+    }
   </script>
 </body>
 </html>
