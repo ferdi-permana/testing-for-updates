@@ -454,8 +454,8 @@
         const askVolEl = document.getElementById(`${config.key}-total-ask-vol`);
         const spreadEl = document.getElementById(`${config.key}-spread`);
 
-        if (bidVolEl) bidVolEl.textContent = fmtNumber(totalBidVol);
-        if (askVolEl) askVolEl.textContent = fmtNumber(totalAskVol);
+        if (bidVolEl) bidVolEl.textContent = fmtNumber(Math.round(totalBidVol));
+        if (askVolEl) askVolEl.textContent = fmtNumber(Math.round(totalAskVol));
         if (spreadEl) {
           spreadEl.textContent = data?.spread && data.spread > 0 ? fmtIdr(data.spread) : "Rp -";
         }
