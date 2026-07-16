@@ -513,7 +513,7 @@
 
     async function fetchTokocrypto() {
       try {
-        const url = "https://data-api.binance.vision/api/v3/depth?symbol=USDTIDR&limit=10";
+        const url = "https://data-api.binance.vision/api/v3/depth?symbol=USDTIDR&limit=100";
         const response = await fetch(url, { cache: "no-store" });
         if (!response.ok) throw new Error("Jalur alternatif mentah gagal");
         const data = await response.json();
