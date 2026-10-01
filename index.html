@@ -284,8 +284,8 @@
     const REQUEST_TIMEOUT_MS = 14000;
     
     const IndodaxLevel = {
-      regular: { makerFee: 0.001111, takerFee: 0.002111 },
-      vip:     { makerFee: 0.000111, takerFee: 0.000911 }
+      regular: { makerFee: 0.0010555, takerFee: 0.0020555 },
+      vip:     { makerFee: 0.0000555, takerFee: 0.0010555 }
     };
 
     const TokocryptoLevel = {
@@ -739,10 +739,10 @@
       const selectedTokocryptoLvl = document.getElementById("lvl-tokocrypto")?.value || "regular";
 
       const ratesConfig = { 
-        reku: { makerFee: 0.0010, takerFee: 0.0010 },
+        reku: { makerFee: 0.0010555, takerFee: 0.0010555 },
         indodax: IndodaxLevel[selectedIndodaxLvl], 
         tokocrypto: TokocryptoLevel[selectedTokocryptoLvl], 
-        pintu: { makerFee: 0.001311, takerFee: 0.001811 } 
+        pintu: { makerFee: 0.0012555, takerFee: 0.0017555 } 
       };
 
       Object.keys(ratesConfig).forEach((key) => {
