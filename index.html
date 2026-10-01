@@ -292,7 +292,7 @@
 
     let currentSimMode = 'buy';
     
-    // Fee Structure untuk Beli (BUY)
+    // Structure Fee Beli (BUY)
     const FeesBuy = {
       reku: { makerFee: 0.0010555, takerFee: 0.0010555 },
       pintu: { makerFee: 0.0012555, takerFee: 0.0017555 },
@@ -314,7 +314,7 @@
       }
     };
 
-    // Fee Structure untuk Jual (SELL)
+    // Structure Fee Jual (SELL)
     const FeesSell = {
       reku: { makerFee: 0.0031555, takerFee: 0.0031555 },
       pintu: { makerFee: 0.0033555, takerFee: 0.0038555 },
@@ -402,6 +402,12 @@
 
     function bindEvents() {
       els.refreshButton.addEventListener("click", refreshAll);
+      
+      // Direct Event Listener untuk mempercepat pemprosesan dropdown level VIP
+      const lvlIndodax = document.getElementById("lvl-indodax");
+      const lvlToko = document.getElementById("lvl-tokocrypto");
+      if (lvlIndodax) lvlIndodax.addEventListener("change", calculateSimulatedRates);
+      if (lvlToko) lvlToko.addEventListener("change", calculateSimulatedRates);
     }
 
     function renderShell() {
@@ -745,7 +751,7 @@
     }
     function updateThemeUI(isDark) {
       const icon = document.getElementById("theme-icon"); const text = document.getElementById("theme-text");
-      if (icon) icon.textContent = isDark ? "☀️️" : "🌙"; if (text) text.textContent = isDark ? "Mode Terang" : "Mode Gelap"; 
+      if (icon) icon.textContent = isDark ? "☀" : "🌙"; if (text) text.textContent = isDark ? "Mode Terang" : "Mode Gelap"; 
     }
 
     function renderExchanges() {
@@ -785,7 +791,7 @@
       });
     }
 
-    // SIMULATOR PENJUALAN & PEMBELIAN DENGAN EXPLICIT ROUNDING LOGIC
+    // SIMULATOR PENJUALAN & PEMBELIAN DENGAN EXPLICIT ROUNDING LOGIC TERPILIH ACCURATE
     function calculateSimulatedRates() {
       const sizeInput = document.getElementById("calc-usdt-size");
       if (!sizeInput) return;
@@ -793,9 +799,9 @@
       const cleanValue = sizeInput.value.replace(/\./g, "");
       const targetSize = parseFloat(cleanValue) || 0;
 
-      // Ambil level VIP terkini dari DOM
-      const selectedIndodaxLvl = document.getElementById("lvl-indodax")?.value || "regular";
-      const selectedTokocryptoLvl = document.getElementById("lvl-tokocrypto")?.value || "regular";
+      // Mendapatkan Level Pilihan Langsung dari DOM saat ini
+      const selectedIndodaxLvl = document.getElementById("lvl-indodax") ? document.getElementById("lvl-indodax").value : "regular";
+      const selectedTokocryptoLvl = document.getElementById("lvl-tokocrypto") ? document.getElementById("lvl-tokocrypto").value : "regular";
 
       const activeFeeStructure = currentSimMode === 'buy' ? FeesBuy : FeesSell;
 
@@ -806,16 +812,14 @@
         pintu: activeFeeStructure.pintu 
       };
 
-      // Helper Rounding: Rounding UP untuk Beli, Rounding FLOOR untuk Jual
+      // Pembulatan mengikut MODES (Beli = UP/Ceil, Jual = DOWN/Floor)
       const processRounding = (val) => {
         if (!val || isNaN(val)) return "Rp -";
         let rounded = 0;
         if (currentSimMode === 'buy') {
-          // CEIL (UP) untuk Beli dengan toleransi floating-point precision
           const safeVal = val - 1e-9;
           rounded = Math.ceil(safeVal);
         } else {
-          // FLOOR (DOWN) untuk Jual dengan toleransi floating-point precision
           const safeVal = val + 1e-9;
           rounded = Math.floor(safeVal);
         }
@@ -925,14 +929,6 @@
         }
       });
     }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      const inputEl = document.getElementById("calc-usdt-size");
-      if (inputEl) {
-        inputEl.addEventListener("input", calculateSimulatedRates);
-        inputEl.addEventListener("change", calculateSimulatedRates);
-      }
-    });
   </script>
 </body>
 </html>
