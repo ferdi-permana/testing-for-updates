@@ -72,7 +72,7 @@
     .panel, .simulator-panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
     .panel { padding: 16px; }
     .bca-panel { grid-column: span 4; }
-    .simulator-panel { grid-column: span 8; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; }
+    .simulator-panel { grid-column: span 8; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
     .metric-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
     .bca-rate-grid { display: flex; gap: 24px; margin: 12px 0; }
     .bca-rate-item { display: flex; flex-direction: column; gap: 2px; }
@@ -81,7 +81,83 @@
     .bca-rate-number.trend-buy { color: var(--buy); }
     .bca-rate-number.trend-sell { color: var(--sell); }
     .meta { font-size: 11px; color: var(--muted); }
-    .sim-header { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; }
+    
+    .sim-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .sim-header { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    
+    /* Style untuk Toggle Jual */
+    .btn-toggle-sell {
+      background: #c92a2a;
+      color: #ffffff;
+      border: none;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 4px 16px;
+      min-height: 28px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-toggle-sell:hover {
+      background: #a61e1e;
+    }
+
+    /* Modal Popup untuk Mini Tools Perhitungan Jual */
+    .sell-modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(2px);
+    }
+    .sell-modal-overlay.active {
+      display: flex;
+    }
+    .sell-modal-card {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      width: min(520px, 90%);
+      position: relative;
+    }
+    .sell-modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--line);
+    }
+    .sell-modal-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--sell);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .sell-modal-close {
+      background: transparent;
+      border: none;
+      font-size: 18px;
+      color: var(--muted);
+      cursor: pointer;
+      min-height: auto;
+      padding: 0 4px;
+    }
+    .sell-modal-close:hover {
+      color: var(--ink);
+      background: transparent;
+    }
+    .sell-cards-wrapper {
+      display: flex;
+      gap: 16px;
+    }
+
     .sim-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 100%; }
     .sim-controls { display: flex; flex-direction: column; gap: 10px; flex: 0 0 180px; }
     .sim-input-wrapper { display: flex; flex-direction: column; gap: 4px; }
@@ -177,6 +253,7 @@
       .book-grid { grid-template-columns: 1fr; }
       .topbar { flex-direction: column; align-items: flex-start; }
       .toolbar { justify-content: flex-start; width: 100%; }
+      .sell-cards-wrapper { flex-direction: column; }
     }
   </style>
 </head>
@@ -214,7 +291,11 @@
       </div>
 
       <div class="simulator-panel">
-        <div class="sim-header">Simulasi Beli USDT (Harga Bersih)</div>
+        <div class="sim-header-row">
+          <div class="sim-header">Simulasi Beli USDT (Harga Bersih)</div>
+          <!-- Toggle Jual sesuai kotak merah -->
+          <button class="btn-toggle-sell" onclick="toggleSellModal(true)">Jual</button>
+        </div>
         <div class="sim-row">
           <div class="sim-controls">
             <div class="sim-input-wrapper">
@@ -267,6 +348,50 @@
         </div>
       </div>
     </section>
+
+    <!-- Modal Pop-up Mini Tools Perhitungan Jual (Box Hijau & Hitam) -->
+    <div class="sell-modal-overlay" id="sell-modal">
+      <div class="sell-modal-card">
+        <div class="sell-modal-header">
+          <span class="sell-modal-title">Simulasi Jual USDT</span>
+          <button class="sell-modal-close" onclick="toggleSellModal(false)">✕</button>
+        </div>
+        <div class="sell-cards-wrapper">
+          <!-- Card Indodax (Kotak Hitam 1) -->
+          <div class="sim-exchange-result" style="flex: 1;">
+            <span class="sim-ex-title" style="color: #2f6f9f;">Indodax</span>
+            <div class="sim-rate-row"><span>Maker (M):</span> <span class="rate-val m" id="sell-rate-m-indodax">Rp 17.000</span></div>
+            <div class="sim-rate-row"><span>Taker (T):</span> <span class="rate-val t" id="sell-rate-t-indodax">Rp 16.988</span></div>
+            <div class="sim-select-wrapper">
+              <select id="sell-lvl-indodax" onchange="calculateSellRates();">
+                <option value="vip">VIP</option>
+                <option value="regular">Regular</option>
+              </select>
+            </div>
+          </div>
+          <!-- Card Tokocrypto (Kotak Hitam 2) -->
+          <div class="sim-exchange-result" style="flex: 1;">
+            <span class="sim-ex-title" style="color: #087f5b;">Tokocrypto</span>
+            <div class="sim-rate-row"><span>Maker (M):</span> <span class="rate-val m" id="sell-rate-m-tokocrypto">Rp 17.000</span></div>
+            <div class="sim-rate-row"><span>Taker (T):</span> <span class="rate-val t" id="sell-rate-t-tokocrypto">Rp 16.988</span></div>
+            <div class="sim-select-wrapper">
+              <select id="sell-lvl-tokocrypto" onchange="calculateSellRates();">
+                <option value="regular">Regular</option>
+                <option value="vip1">VIP 1</option>
+                <option value="vip2">VIP 2</option>
+                <option value="vip3">VIP 3</option>
+                <option value="vip4">VIP 4</option>
+                <option value="vip5">VIP 5</option>
+                <option value="vip6">VIP 6</option>
+                <option value="vip7">VIP 7</option>
+                <option value="vip8">VIP 8</option>
+                <option value="vip9">VIP 9</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div class="orderbook-section-title">
       <h2 style="font-size:14px; font-weight:700; color:var(--muted); letter-spacing:0.05em;">TOP 10 VOLUME ORDER BOOK USDT/IDR</h2>
@@ -335,6 +460,23 @@
       initTheme();
       refreshAll();
       startCountdown();
+    }
+
+    function toggleSellModal(show) {
+      const modal = document.getElementById("sell-modal");
+      if (modal) {
+        if (show) {
+          modal.classList.add("active");
+          calculateSellRates();
+        } else {
+          modal.classList.remove("active");
+        }
+      }
+    }
+
+    function calculateSellRates() {
+      // Fungsi penampung logika perhitungan Simulasi Jual
+      // Nantinya data/rumus spesifik bisa diterapkan di sini saat kamu berikan perinciannya
     }
 
     function formatNumberInput(input) {
