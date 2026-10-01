@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>USDT/IDR Live Order Book</title>
+  <title>USDT/IDR Live Order Book & Simulator</title>
   
   <link rel="icon" type="image/png" href="logo.png">
 
@@ -22,8 +22,6 @@
       --warn: #b7791f;
       --warn-bg: #fff7e6;
       --info: #2f6f9f;
-      --info-bg: #e8f3fb;
-      --bad-bg: #fff0f0;
       --shadow: 0 16px 40px rgba(23, 37, 51, 0.08);
       --radius: 8px;
       color-scheme: light;
@@ -43,9 +41,7 @@
       --sell: #f85149;
       --sell-bg: #2d1f20;
       --warn: #f1e05a;
-      --warn-bg: #2d2a1f;
       --info: #58a6ff;
-      --info-bg: #1f2835;
       color-scheme: dark;
     }
 
@@ -72,7 +68,7 @@
     .panel, .simulator-panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
     .panel { padding: 16px; }
     .bca-panel { grid-column: span 4; }
-    .simulator-panel { grid-column: span 8; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+    .simulator-panel { grid-column: span 8; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; }
     .metric-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
     .bca-rate-grid { display: flex; gap: 24px; margin: 12px 0; }
     .bca-rate-item { display: flex; flex-direction: column; gap: 2px; }
@@ -81,89 +77,19 @@
     .bca-rate-number.trend-buy { color: var(--buy); }
     .bca-rate-number.trend-sell { color: var(--sell); }
     .meta { font-size: 11px; color: var(--muted); }
+    .sim-header { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
     
-    .sim-header-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-    .sim-header { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    
-    /* Style untuk Toggle Jual */
-    .btn-toggle-sell {
-      background: #c92a2a;
-      color: #ffffff;
-      border: none;
-      font-weight: 700;
-      font-size: 12px;
-      padding: 4px 16px;
-      min-height: 28px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .btn-toggle-sell:hover {
-      background: #a61e1e;
-    }
-
-    /* Modal Popup untuk Mini Tools Perhitungan Jual */
-    .sell-modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.4);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-      backdrop-filter: blur(2px);
-    }
-    .sell-modal-overlay.active {
-      display: flex;
-    }
-    .sell-modal-card {
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: var(--radius);
-      box-shadow: var(--shadow);
-      padding: 20px;
-      width: min(520px, 90%);
-      position: relative;
-    }
-    .sell-modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      padding-bottom: 10px;
-      border-bottom: 1px solid var(--line);
-    }
-    .sell-modal-title {
-      font-size: 14px;
-      font-weight: 700;
-      color: var(--sell);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-    .sell-modal-close {
-      background: transparent;
-      border: none;
-      font-size: 18px;
-      color: var(--muted);
-      cursor: pointer;
-      min-height: auto;
-      padding: 0 4px;
-    }
-    .sell-modal-close:hover {
-      color: var(--ink);
-      background: transparent;
-    }
-    .sell-cards-wrapper {
-      display: flex;
-      gap: 16px;
-    }
+    /* Segmented Control Toggle untuk Mode Beli/Jual */
+    .sim-mode-toggle { display: inline-flex; background: var(--surface-2); p-padding: 2px; border-radius: 6px; border: 1px solid var(--line); padding: 2px; }
+    .sim-mode-btn { border: none; background: transparent; padding: 4px 12px; font-size: 11px; font-weight: 700; border-radius: 4px; cursor: pointer; color: var(--muted); min-height: 28px; }
+    .sim-mode-btn.active-buy { background: var(--buy); color: #ffffff; }
+    .sim-mode-btn.active-sell { background: var(--sell); color: #ffffff; }
 
     .sim-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 100%; }
     .sim-controls { display: flex; flex-direction: column; gap: 10px; flex: 0 0 180px; }
     .sim-input-wrapper { display: flex; flex-direction: column; gap: 4px; }
     .sim-input-wrapper label { font-size: 11px; color: var(--muted); font-weight: 500; }
     .sim-input-wrapper input, .sim-input-wrapper select { width: 100%; min-height: 36px; font-weight: 700; font-size: 13px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); text-align: center; }
-    .sim-input-wrapper select { text-align-last: center; font-weight: 600; }
     .sim-results-wrapper { display: flex; gap: 12px; flex: 1; justify-content: flex-end; }
     .sim-exchange-result { background: var(--surface-2); border-radius: 6px; padding: 10px 14px; min-width: 175px; display: flex; flex-direction: column; gap: 4px; }
     .sim-select-wrapper { margin-top: 4px; padding-top: 6px; border-top: 1px dashed var(--line); }
@@ -253,7 +179,6 @@
       .book-grid { grid-template-columns: 1fr; }
       .topbar { flex-direction: column; align-items: flex-start; }
       .toolbar { justify-content: flex-start; width: 100%; }
-      .sell-cards-wrapper { flex-direction: column; }
     }
   </style>
 </head>
@@ -291,15 +216,17 @@
       </div>
 
       <div class="simulator-panel">
-        <div class="sim-header-row">
-          <div class="sim-header">Simulasi Beli USDT (Harga Bersih)</div>
-          <!-- Toggle Jual sesuai kotak merah -->
-          <button class="btn-toggle-sell" onclick="toggleSellModal(true)">Jual</button>
+        <div class="sim-header">
+          <span id="sim-title-label">Simulasi Transaksi USDT</span>
+          <div class="sim-mode-toggle">
+            <button type="button" class="sim-mode-btn active-buy" id="btn-mode-buy" onclick="setSimMode('buy')">Beli</button>
+            <button type="button" class="sim-mode-btn" id="btn-mode-sell" onclick="setSimMode('sell')">Jual</button>
+          </div>
         </div>
         <div class="sim-row">
           <div class="sim-controls">
             <div class="sim-input-wrapper">
-              <label for="calc-usdt-size">Ukuran Beli (USDT)</label>
+              <label for="calc-usdt-size" id="sim-input-label">Ukuran Beli (USDT)</label>
               <input type="text" id="calc-usdt-size" value="100" oninput="formatNumberInput(this); calculateSimulatedRates();">
             </div>
           </div>
@@ -349,50 +276,6 @@
       </div>
     </section>
 
-    <!-- Modal Pop-up Mini Tools Perhitungan Jual (Box Hijau & Hitam) -->
-    <div class="sell-modal-overlay" id="sell-modal">
-      <div class="sell-modal-card">
-        <div class="sell-modal-header">
-          <span class="sell-modal-title">Simulasi Jual USDT</span>
-          <button class="sell-modal-close" onclick="toggleSellModal(false)">✕</button>
-        </div>
-        <div class="sell-cards-wrapper">
-          <!-- Card Indodax (Kotak Hitam 1) -->
-          <div class="sim-exchange-result" style="flex: 1;">
-            <span class="sim-ex-title" style="color: #2f6f9f;">Indodax</span>
-            <div class="sim-rate-row"><span>Maker (M):</span> <span class="rate-val m" id="sell-rate-m-indodax">Rp 17.000</span></div>
-            <div class="sim-rate-row"><span>Taker (T):</span> <span class="rate-val t" id="sell-rate-t-indodax">Rp 16.988</span></div>
-            <div class="sim-select-wrapper">
-              <select id="sell-lvl-indodax" onchange="calculateSellRates();">
-                <option value="vip">VIP</option>
-                <option value="regular">Regular</option>
-              </select>
-            </div>
-          </div>
-          <!-- Card Tokocrypto (Kotak Hitam 2) -->
-          <div class="sim-exchange-result" style="flex: 1;">
-            <span class="sim-ex-title" style="color: #087f5b;">Tokocrypto</span>
-            <div class="sim-rate-row"><span>Maker (M):</span> <span class="rate-val m" id="sell-rate-m-tokocrypto">Rp 17.000</span></div>
-            <div class="sim-rate-row"><span>Taker (T):</span> <span class="rate-val t" id="sell-rate-t-tokocrypto">Rp 16.988</span></div>
-            <div class="sim-select-wrapper">
-              <select id="sell-lvl-tokocrypto" onchange="calculateSellRates();">
-                <option value="regular">Regular</option>
-                <option value="vip1">VIP 1</option>
-                <option value="vip2">VIP 2</option>
-                <option value="vip3">VIP 3</option>
-                <option value="vip4">VIP 4</option>
-                <option value="vip5">VIP 5</option>
-                <option value="vip6">VIP 6</option>
-                <option value="vip7">VIP 7</option>
-                <option value="vip8">VIP 8</option>
-                <option value="vip9">VIP 9</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
     <div class="orderbook-section-title">
       <h2 style="font-size:14px; font-weight:700; color:var(--muted); letter-spacing:0.05em;">TOP 10 VOLUME ORDER BOOK USDT/IDR</h2>
     </div>
@@ -407,23 +290,52 @@
   <script>
     const REFRESH_SECONDS = 300;
     const REQUEST_TIMEOUT_MS = 14000;
+
+    // Mode Simulasi Default: 'buy' atau 'sell'
+    let currentSimMode = 'buy';
     
-    const IndodaxLevel = {
-      regular: { makerFee: 0.0010555, takerFee: 0.0020555 },
-      vip:     { makerFee: 0.0000555, takerFee: 0.0010555 }
+    // Fee Structure untuk Beli (BUY)
+    const FeesBuy = {
+      reku: { makerFee: 0.0010555, takerFee: 0.0010555 },
+      pintu: { makerFee: 0.0012555, takerFee: 0.0017555 },
+      indodax: {
+        regular: { makerFee: 0.0021555, takerFee: 0.0031555 },
+        vip:     { makerFee: 0.0011555, takerFee: 0.0021555 }
+      },
+      tokocrypto: {
+        regular: { makerFee: 0.0031, takerFee: 0.0041 },
+        vip1:    { makerFee: 0.0031, takerFee: 0.0041 },
+        vip2:    { makerFee: 0.0031, takerFee: 0.0041 },
+        vip3:    { makerFee: 0.0031, takerFee: 0.0041 },
+        vip4:    { makerFee: 0.0031, takerFee: 0.0039 },
+        vip5:    { makerFee: 0.0030, takerFee: 0.0037 },
+        vip6:    { makerFee: 0.0028, takerFee: 0.0033 },
+        vip7:    { makerFee: 0.0028, takerFee: 0.0033 },
+        vip8:    { makerFee: 0.0027, takerFee: 0.0032 },
+        vip9:    { makerFee: 0.0027, takerFee: 0.0031 }
+      }
     };
 
-    const TokocryptoLevel = {
-      regular: { makerFee: 0.001222, takerFee: 0.002222 },
-      vip1:    { makerFee: 0.001197, takerFee: 0.002166 },
-      vip2:    { makerFee: 0.001172, takerFee: 0.002122 },
-      vip3:    { makerFee: 0.001122, takerFee: 0.002022 },
-      vip4:    { makerFee: 0.001022, takerFee: 0.001822 },
-      vip5:    { makerFee: 0.000922, takerFee: 0.001622 },
-      vip6:    { makerFee: 0.000722, takerFee: 0.001242 },
-      vip7:    { makerFee: 0.000682, takerFee: 0.001172 },
-      vip8:    { makerFee: 0.000642, takerFee: 0.001122 },
-      vip9:    { makerFee: 0.000582, takerFee: 0.001002 }
+    // Fee Structure untuk Jual (SELL)
+    const FeesSell = {
+      reku: { makerFee: 0.0010555, takerFee: 0.0010555 },
+      pintu: { makerFee: 0.0012555, takerFee: 0.0017555 },
+      indodax: {
+        regular: { makerFee: 0.0031555, takerFee: 0.0041555 },
+        vip:     { makerFee: 0.0021555, takerFee: 0.0031555 }
+      },
+      tokocrypto: {
+        regular: { makerFee: 0.003322, takerFee: 0.004322 },
+        vip1:    { makerFee: 0.003297, takerFee: 0.004266 },
+        vip2:    { makerFee: 0.003272, takerFee: 0.004222 },
+        vip3:    { makerFee: 0.003222, takerFee: 0.004122 },
+        vip4:    { makerFee: 0.003122, takerFee: 0.003922 },
+        vip5:    { makerFee: 0.003022, takerFee: 0.003722 },
+        vip6:    { makerFee: 0.002822, takerFee: 0.003342 },
+        vip7:    { makerFee: 0.002782, takerFee: 0.003272 },
+        vip8:    { makerFee: 0.002742, takerFee: 0.003222 },
+        vip9:    { makerFee: 0.002682, takerFee: 0.003102 }
+      }
     };
 
     const state = {
@@ -462,21 +374,26 @@
       startCountdown();
     }
 
-    function toggleSellModal(show) {
-      const modal = document.getElementById("sell-modal");
-      if (modal) {
-        if (show) {
-          modal.classList.add("active");
-          calculateSellRates();
-        } else {
-          modal.classList.remove("active");
-        }
-      }
-    }
+    function setSimMode(mode) {
+      currentSimMode = mode;
+      const btnBuy = document.getElementById("btn-mode-buy");
+      const btnSell = document.getElementById("btn-mode-sell");
+      const labelInput = document.getElementById("sim-input-label");
+      const labelTitle = document.getElementById("sim-title-label");
 
-    function calculateSellRates() {
-      // Fungsi penampung logika perhitungan Simulasi Jual
-      // Nantinya data/rumus spesifik bisa diterapkan di sini saat kamu berikan perinciannya
+      if (mode === 'buy') {
+        btnBuy.className = "sim-mode-btn active-buy";
+        btnSell.className = "sim-mode-btn";
+        labelInput.textContent = "Ukuran Beli (USDT)";
+        labelTitle.textContent = "Simulasi Beli USDT (Total Biaya Dikeluarkan)";
+      } else {
+        btnBuy.className = "sim-mode-btn";
+        btnSell.className = "sim-mode-btn active-sell";
+        labelInput.textContent = "Ukuran Jual (USDT)";
+        labelTitle.textContent = "Simulasi Jual USDT (Hasil Bersih Diterima)";
+      }
+
+      calculateSimulatedRates();
     }
 
     function formatNumberInput(input) {
@@ -870,6 +787,7 @@
       });
     }
 
+    // SIMULATOR PENJUALAN & PEMBELIAN (BUY / SELL DYNAMIC LOGIC)
     function calculateSimulatedRates() {
       const sizeInput = document.getElementById("calc-usdt-size");
       if (!sizeInput) return;
@@ -880,38 +798,101 @@
       const selectedIndodaxLvl = document.getElementById("lvl-indodax")?.value || "regular";
       const selectedTokocryptoLvl = document.getElementById("lvl-tokocrypto")?.value || "regular";
 
+      // Memilih struktur Fee berdasarkan Mode yang aktif
+      const activeFees = currentSimMode === 'buy' ? FeesBuy : FeesSell;
+
       const ratesConfig = { 
-        reku: { makerFee: 0.0010555, takerFee: 0.0010555 },
-        indodax: IndodaxLevel[selectedIndodaxLvl], 
-        tokocrypto: TokocryptoLevel[selectedTokocryptoLvl], 
-        pintu: { makerFee: 0.0012555, takerFee: 0.0017555 } 
+        reku: activeFees.reku,
+        indodax: activeFees.indodax[selectedIndodaxLvl], 
+        tokocrypto: activeFees.tokocrypto[selectedTokocryptoLvl], 
+        pintu: activeFees.pintu 
       };
 
       Object.keys(ratesConfig).forEach((key) => {
-        const data = state.exchanges[key]; const config = ratesConfig[key];
-        const mEl = document.getElementById(`rate-m-${key}`); const tEl = document.getElementById(`rate-t-${key}`);
+        const data = state.exchanges[key]; 
+        const config = ratesConfig[key];
+        const mEl = document.getElementById(`rate-m-${key}`); 
+        const tEl = document.getElementById(`rate-t-${key}`);
         if (!mEl || !tEl) return;
         
-        if (!data || data.error || !Array.isArray(data.bids) || !data.bids.length || !Array.isArray(data.asks) || !data.asks.length || targetSize <= 0 || !config) { 
-          mEl.textContent = "Rp -"; tEl.textContent = "Rp -"; return; 
+        if (!data || data.error || targetSize <= 0 || !config) { 
+          mEl.textContent = "Rp -"; 
+          tEl.textContent = "Rp -"; 
+          return; 
         }
 
-        const bestBidPrice = data.bids[0]?.price;
-        if (bestBidPrice && !isNaN(bestBidPrice)) {
-          mEl.textContent = "Rp " + Math.ceil(bestBidPrice * (1 + config.makerFee)).toLocaleString("id-ID");
-        } else { mEl.textContent = "Rp -"; }
+        if (currentSimMode === 'buy') {
+          // --- MODE BELI ---
+          // MAKER BUY: Beli dari Best Ask + Fee
+          const bestAskPrice = data.asks && data.asks[0] ? data.asks[0].price : null;
+          if (bestAskPrice && !isNaN(bestAskPrice)) {
+            const netMakerPrice = bestAskPrice * (1 + config.makerFee);
+            mEl.textContent = "Rp " + Math.round(netMakerPrice).toLocaleString("id-ID");
+          } else {
+            mEl.textContent = "Rp -";
+          }
 
-        let remainingSize = targetSize; let lastHitPrice = 0;
-        for (const order of data.asks) {
-          const price = Number(order.price || 0); const qty = Number(order.qty || 0);
-          if (price <= 0 || qty <= 0) continue;
-          lastHitPrice = price; remainingSize -= qty;
-          if (remainingSize <= 0) break;
+          // TAKER BUY: Iterasi Asks (Last Hit) + Fee
+          let remainingSize = targetSize;
+          let lastHitPrice = 0;
+
+          if (Array.isArray(data.asks) && data.asks.length > 0) {
+            for (const order of data.asks) {
+              const price = Number(order.price || 0);
+              const qty = Number(order.qty || 0);
+              if (price <= 0 || qty <= 0) continue;
+
+              lastHitPrice = price;
+              remainingSize -= qty;
+              if (remainingSize <= 0) break;
+            }
+
+            if (lastHitPrice > 0 && !isNaN(lastHitPrice)) {
+              const netTakerPrice = lastHitPrice * (1 + config.takerFee);
+              tEl.textContent = "Rp " + Math.round(netTakerPrice).toLocaleString("id-ID");
+            } else {
+              tEl.textContent = "Rp -";
+            }
+          } else {
+            tEl.textContent = "Rp -";
+          }
+
+        } else {
+          // --- MODE JUAL ---
+          // MAKER SELL: Jual ke Best Bid - Fee
+          const bestBidPrice = data.bids && data.bids[0] ? data.bids[0].price : null;
+          if (bestBidPrice && !isNaN(bestBidPrice)) {
+            const netMakerPrice = bestBidPrice * (1 - config.makerFee);
+            mEl.textContent = "Rp " + Math.floor(netMakerPrice).toLocaleString("id-ID");
+          } else {
+            mEl.textContent = "Rp -";
+          }
+
+          // TAKER SELL: Iterasi Bids (Last Hit) - Fee
+          let remainingSize = targetSize;
+          let lastHitPrice = 0;
+
+          if (Array.isArray(data.bids) && data.bids.length > 0) {
+            for (const order of data.bids) {
+              const price = Number(order.price || 0);
+              const qty = Number(order.qty || 0);
+              if (price <= 0 || qty <= 0) continue;
+
+              lastHitPrice = price;
+              remainingSize -= qty;
+              if (remainingSize <= 0) break;
+            }
+
+            if (lastHitPrice > 0 && !isNaN(lastHitPrice)) {
+              const netTakerPrice = lastHitPrice * (1 - config.takerFee);
+              tEl.textContent = "Rp " + Math.floor(netTakerPrice).toLocaleString("id-ID");
+            } else {
+              tEl.textContent = "Rp -";
+            }
+          } else {
+            tEl.textContent = "Rp -";
+          }
         }
-        
-        if (lastHitPrice > 0 && !isNaN(lastHitPrice) && isFinite(lastHitPrice)) {
-          tEl.textContent = "Rp " + Math.ceil(lastHitPrice * (1 + config.takerFee)).toLocaleString("id-ID");
-        } else { tEl.textContent = "Rp -"; }
       });
     }
 
