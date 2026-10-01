@@ -216,7 +216,7 @@
 
       <div class="simulator-panel">
         <div class="sim-header">
-          <span id="sim-title-label">Simulasi Beli USDT (Total Biaya Dikeluarkan)</span>
+          <span id="sim-title-label">Simulasi Beli USDT (Harga Efektif)</span>
           <div class="sim-mode-toggle">
             <button type="button" class="sim-mode-btn active-buy" id="btn-mode-buy" onclick="setSimMode('buy')">Beli</button>
             <button type="button" class="sim-mode-btn" id="btn-mode-sell" onclick="setSimMode('sell')">Jual</button>
@@ -292,7 +292,7 @@
 
     let currentSimMode = 'buy';
     
-    // Structure Fee Beli (BUY)
+    // Fee Structure Beli (BUY)
     const FeesBuy = {
       reku: { makerFee: 0.0010555, takerFee: 0.0010555 },
       pintu: { makerFee: 0.0012555, takerFee: 0.0017555 },
@@ -314,7 +314,7 @@
       }
     };
 
-    // Structure Fee Jual (SELL)
+    // Fee Structure Jual (SELL)
     const FeesSell = {
       reku: { makerFee: 0.0031555, takerFee: 0.0031555 },
       pintu: { makerFee: 0.0033555, takerFee: 0.0038555 },
@@ -383,12 +383,12 @@
         btnBuy.className = "sim-mode-btn active-buy";
         btnSell.className = "sim-mode-btn";
         labelInput.textContent = "Ukuran Beli (USDT)";
-        labelTitle.textContent = "Simulasi Beli USDT (Total Biaya Dikeluarkan)";
+        labelTitle.textContent = "Simulasi Beli USDT (Harga Efektif)";
       } else {
         btnBuy.className = "sim-mode-btn";
         btnSell.className = "sim-mode-btn active-sell";
         labelInput.textContent = "Ukuran Jual (USDT)";
-        labelTitle.textContent = "Simulasi Jual USDT (Hasil Bersih Diterima)";
+        labelTitle.textContent = "Simulasi Jual USDT (Hasil Bersih)";
       }
 
       calculateSimulatedRates();
@@ -403,7 +403,6 @@
     function bindEvents() {
       els.refreshButton.addEventListener("click", refreshAll);
       
-      // Direct Event Listener untuk mempercepat pemprosesan dropdown level VIP
       const lvlIndodax = document.getElementById("lvl-indodax");
       const lvlToko = document.getElementById("lvl-tokocrypto");
       if (lvlIndodax) lvlIndodax.addEventListener("change", calculateSimulatedRates);
@@ -791,7 +790,7 @@
       });
     }
 
-    // SIMULATOR PENJUALAN & PEMBELIAN DENGAN EXPLICIT ROUNDING LOGIC TERPILIH ACCURATE
+    // SIMULATOR MAKER & TAKER DENGAN LOGIC LAST HIT PRICE & ROUNDING ADJUSTMENT
     function calculateSimulatedRates() {
       const sizeInput = document.getElementById("calc-usdt-size");
       if (!sizeInput) return;
@@ -799,7 +798,6 @@
       const cleanValue = sizeInput.value.replace(/\./g, "");
       const targetSize = parseFloat(cleanValue) || 0;
 
-      // Mendapatkan Level Pilihan Langsung dari DOM saat ini
       const selectedIndodaxLvl = document.getElementById("lvl-indodax") ? document.getElementById("lvl-indodax").value : "regular";
       const selectedTokocryptoLvl = document.getElementById("lvl-tokocrypto") ? document.getElementById("lvl-tokocrypto").value : "regular";
 
@@ -812,7 +810,7 @@
         pintu: activeFeeStructure.pintu 
       };
 
-      // Pembulatan mengikut MODES (Beli = UP/Ceil, Jual = DOWN/Floor)
+      // Rules Pembulatan: Beli = Round Up (Math.ceil), Jual = Round Floor (Math.floor)
       const processRounding = (val) => {
         if (!val || isNaN(val)) return "Rp -";
         let rounded = 0;
@@ -840,9 +838,9 @@
         }
 
         if (currentSimMode === 'buy') {
-          // --- MODE BELI (ROUNDING UP) ---
+          // --- MODE BELI (ROUND UP) ---
           
-          // 1. MAKER BUY: Best Bid * (1 + Maker Fee Beli)
+          // 1. MAKER BUY: Pasang di Best Bid -> Best Bid * (1 + Maker Fee Beli)
           const bestBidPrice = data.bids && data.bids[0] ? data.bids[0].price : null;
           if (bestBidPrice && !isNaN(bestBidPrice)) {
             const exactMakerPrice = bestBidPrice * (1 + config.makerFee);
@@ -851,10 +849,9 @@
             mEl.textContent = "Rp -";
           }
 
-          // 2. TAKER BUY: Orderbook Asks (Ascending)
+          // 2. TAKER BUY: Last Hit Price dari orderbook Asks * (1 + Taker Fee Beli)
           let remainingSize = targetSize;
-          let totalCostIdr = 0;
-          let totalFilledQty = 0;
+          let lastHitPrice = null;
 
           const sortedAsks = Array.isArray(data.asks) ? [...data.asks].sort((a, b) => a.price - b.price) : [];
 
@@ -864,17 +861,15 @@
               const qty = Number(order.qty || 0);
               if (price <= 0 || qty <= 0) continue;
 
+              lastHitPrice = price; // Update harga level terisi terakhir
               const fillQty = Math.min(remainingSize, qty);
-              totalCostIdr += fillQty * price;
-              totalFilledQty += fillQty;
               remainingSize -= fillQty;
 
               if (remainingSize <= 1e-8) break;
             }
 
-            if (totalFilledQty > 0) {
-              const vwapPrice = totalCostIdr / totalFilledQty;
-              const exactTakerPrice = vwapPrice * (1 + config.takerFee);
+            if (lastHitPrice) {
+              const exactTakerPrice = lastHitPrice * (1 + config.takerFee);
               tEl.textContent = processRounding(exactTakerPrice);
             } else {
               tEl.textContent = "Rp -";
@@ -884,9 +879,9 @@
           }
 
         } else {
-          // --- MODE JUAL (ROUNDING FLOOR) ---
+          // --- MODE JUAL (ROUND FLOOR) ---
           
-          // 1. MAKER SELL: Best Ask * (1 - Maker Fee Jual)
+          // 1. MAKER SELL: Pasang di Best Ask -> Best Ask * (1 - Maker Fee Jual)
           const bestAskPrice = data.asks && data.asks[0] ? data.asks[0].price : null;
           if (bestAskPrice && !isNaN(bestAskPrice)) {
             const exactMakerPrice = bestAskPrice * (1 - config.makerFee);
@@ -895,10 +890,9 @@
             mEl.textContent = "Rp -";
           }
 
-          // 2. TAKER SELL: Orderbook Bids (Descending)
+          // 2. TAKER SELL: Last Hit Price dari orderbook Bids * (1 - Taker Fee Jual)
           let remainingSize = targetSize;
-          let totalRevenueIdr = 0;
-          let totalFilledQty = 0;
+          let lastHitPrice = null;
 
           const sortedBids = Array.isArray(data.bids) ? [...data.bids].sort((a, b) => b.price - a.price) : [];
 
@@ -908,17 +902,15 @@
               const qty = Number(order.qty || 0);
               if (price <= 0 || qty <= 0) continue;
 
+              lastHitPrice = price; // Update harga level terisi terakhir
               const fillQty = Math.min(remainingSize, qty);
-              totalRevenueIdr += fillQty * price;
-              totalFilledQty += fillQty;
               remainingSize -= fillQty;
 
               if (remainingSize <= 1e-8) break;
             }
 
-            if (totalFilledQty > 0) {
-              const vwapPrice = totalRevenueIdr / totalFilledQty;
-              const exactTakerPrice = vwapPrice * (1 - config.takerFee);
+            if (lastHitPrice) {
+              const exactTakerPrice = lastHitPrice * (1 - config.takerFee);
               tEl.textContent = processRounding(exactTakerPrice);
             } else {
               tEl.textContent = "Rp -";
