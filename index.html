@@ -79,8 +79,7 @@
     .meta { font-size: 11px; color: var(--muted); }
     .sim-header { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; }
     
-    /* Segmented Control Toggle untuk Mode Beli/Jual */
-    .sim-mode-toggle { display: inline-flex; background: var(--surface-2); p-padding: 2px; border-radius: 6px; border: 1px solid var(--line); padding: 2px; }
+    .sim-mode-toggle { display: inline-flex; background: var(--surface-2); border-radius: 6px; border: 1px solid var(--line); padding: 2px; }
     .sim-mode-btn { border: none; background: transparent; padding: 4px 12px; font-size: 11px; font-weight: 700; border-radius: 4px; cursor: pointer; color: var(--muted); min-height: 28px; }
     .sim-mode-btn.active-buy { background: var(--buy); color: #ffffff; }
     .sim-mode-btn.active-sell { background: var(--sell); color: #ffffff; }
@@ -217,7 +216,7 @@
 
       <div class="simulator-panel">
         <div class="sim-header">
-          <span id="sim-title-label">Simulasi Transaksi USDT</span>
+          <span id="sim-title-label">Simulasi Beli USDT (Total Biaya Dikeluarkan)</span>
           <div class="sim-mode-toggle">
             <button type="button" class="sim-mode-btn active-buy" id="btn-mode-buy" onclick="setSimMode('buy')">Beli</button>
             <button type="button" class="sim-mode-btn" id="btn-mode-sell" onclick="setSimMode('sell')">Jual</button>
@@ -291,7 +290,6 @@
     const REFRESH_SECONDS = 300;
     const REQUEST_TIMEOUT_MS = 14000;
 
-    // Mode Simulasi Default: 'buy' atau 'sell'
     let currentSimMode = 'buy';
     
     // Fee Structure untuk Beli (BUY)
@@ -299,20 +297,20 @@
       reku: { makerFee: 0.0010555, takerFee: 0.0010555 },
       pintu: { makerFee: 0.0012555, takerFee: 0.0017555 },
       indodax: {
-      regular: { makerFee: 0.0010555, takerFee: 0.0020555 },
-      vip:     { makerFee: 0.0000555, takerFee: 0.0010555 }
+        regular: { makerFee: 0.0010555, takerFee: 0.0020555 },
+        vip:     { makerFee: 0.0000555, takerFee: 0.0010555 }
       },
       tokocrypto: {
-      regular: { makerFee: 0.001222, takerFee: 0.002222 },
-      vip1:    { makerFee: 0.001197, takerFee: 0.002166 },
-      vip2:    { makerFee: 0.001172, takerFee: 0.002122 },
-      vip3:    { makerFee: 0.001122, takerFee: 0.002022 },
-      vip4:    { makerFee: 0.001022, takerFee: 0.001822 },
-      vip5:    { makerFee: 0.000922, takerFee: 0.001622 },
-      vip6:    { makerFee: 0.000722, takerFee: 0.001242 },
-      vip7:    { makerFee: 0.000682, takerFee: 0.001172 },
-      vip8:    { makerFee: 0.000642, takerFee: 0.001122 },
-      vip9:    { makerFee: 0.000582, takerFee: 0.001002 }
+        regular: { makerFee: 0.001222, takerFee: 0.002222 },
+        vip1:    { makerFee: 0.001197, takerFee: 0.002166 },
+        vip2:    { makerFee: 0.001172, takerFee: 0.002122 },
+        vip3:    { makerFee: 0.001122, takerFee: 0.002022 },
+        vip4:    { makerFee: 0.001022, takerFee: 0.001822 },
+        vip5:    { makerFee: 0.000922, takerFee: 0.001622 },
+        vip6:    { makerFee: 0.000722, takerFee: 0.001242 },
+        vip7:    { makerFee: 0.000682, takerFee: 0.001172 },
+        vip8:    { makerFee: 0.000642, takerFee: 0.001122 },
+        vip9:    { makerFee: 0.000582, takerFee: 0.001002 }
       }
     };
 
@@ -787,7 +785,7 @@
       });
     }
 
-    // SIMULATOR PENJUALAN & PEMBELIAN (BUY / SELL DYNAMIC LOGIC)
+    // SIMULATOR PENJUALAN & PEMBELIAN (FIXED LOGIC MULTI-EXCHANGE)
     function calculateSimulatedRates() {
       const sizeInput = document.getElementById("calc-usdt-size");
       if (!sizeInput) return;
@@ -798,7 +796,6 @@
       const selectedIndodaxLvl = document.getElementById("lvl-indodax")?.value || "regular";
       const selectedTokocryptoLvl = document.getElementById("lvl-tokocrypto")?.value || "regular";
 
-      // Memilih struktur Fee berdasarkan Mode yang aktif
       const activeFees = currentSimMode === 'buy' ? FeesBuy : FeesSell;
 
       const ratesConfig = { 
@@ -823,18 +820,22 @@
 
         if (currentSimMode === 'buy') {
           // --- MODE BELI ---
-          // MAKER BUY: Beli dari Best Ask + Fee
-          const bestAskPrice = data.asks && data.asks[0] ? data.asks[0].price : null;
-          if (bestAskPrice && !isNaN(bestAskPrice)) {
-            const netMakerPrice = bestAskPrice * (1 + config.makerFee);
+          
+          // 1. MAKER BUY (Memasang limit order Beli):
+          // Mengacu pada Best Bid Price (antrean beli tertinggi) + Fee Beli Maker
+          const bestBidPrice = data.bids && data.bids[0] ? data.bids[0].price : null;
+          if (bestBidPrice && !isNaN(bestBidPrice)) {
+            const netMakerPrice = bestBidPrice * (1 + config.makerFee);
             mEl.textContent = "Rp " + Math.round(netMakerPrice).toLocaleString("id-ID");
           } else {
             mEl.textContent = "Rp -";
           }
 
-          // TAKER BUY: Iterasi Asks (Last Hit) + Fee
+          // 2. TAKER BUY (Membeli langsung dari Asks/Order Jual):
+          // Menghitung Rata-rata Terbobot (VWAP) dari orderbook Asks + Fee Beli Taker
           let remainingSize = targetSize;
-          let lastHitPrice = 0;
+          let totalCostIdr = 0;
+          let totalFilledQty = 0;
 
           if (Array.isArray(data.asks) && data.asks.length > 0) {
             for (const order of data.asks) {
@@ -842,13 +843,17 @@
               const qty = Number(order.qty || 0);
               if (price <= 0 || qty <= 0) continue;
 
-              lastHitPrice = price;
-              remainingSize -= qty;
+              const fillQty = Math.min(remainingSize, qty);
+              totalCostIdr += fillQty * price;
+              totalFilledQty += fillQty;
+              remainingSize -= fillQty;
+
               if (remainingSize <= 0) break;
             }
 
-            if (lastHitPrice > 0 && !isNaN(lastHitPrice)) {
-              const netTakerPrice = lastHitPrice * (1 + config.takerFee);
+            if (totalFilledQty > 0) {
+              const vwapPrice = totalCostIdr / totalFilledQty;
+              const netTakerPrice = vwapPrice * (1 + config.takerFee);
               tEl.textContent = "Rp " + Math.round(netTakerPrice).toLocaleString("id-ID");
             } else {
               tEl.textContent = "Rp -";
@@ -859,18 +864,22 @@
 
         } else {
           // --- MODE JUAL ---
-          // MAKER SELL: Jual ke Best Bid - Fee
-          const bestBidPrice = data.bids && data.bids[0] ? data.bids[0].price : null;
-          if (bestBidPrice && !isNaN(bestBidPrice)) {
-            const netMakerPrice = bestBidPrice * (1 - config.makerFee);
+          
+          // 1. MAKER SELL (Memasang limit order Jual):
+          // Mengacu pada Best Ask Price (antrean jual terendah) - Fee Jual Maker
+          const bestAskPrice = data.asks && data.asks[0] ? data.asks[0].price : null;
+          if (bestAskPrice && !isNaN(bestAskPrice)) {
+            const netMakerPrice = bestAskPrice * (1 - config.makerFee);
             mEl.textContent = "Rp " + Math.floor(netMakerPrice).toLocaleString("id-ID");
           } else {
             mEl.textContent = "Rp -";
           }
 
-          // TAKER SELL: Iterasi Bids (Last Hit) - Fee
+          // 2. TAKER SELL (Menjual langsung ke Bids/Order Beli):
+          // Menghitung Rata-rata Terbobot (VWAP) dari orderbook Bids - Fee Jual Taker
           let remainingSize = targetSize;
-          let lastHitPrice = 0;
+          let totalRevenueIdr = 0;
+          let totalFilledQty = 0;
 
           if (Array.isArray(data.bids) && data.bids.length > 0) {
             for (const order of data.bids) {
@@ -878,13 +887,17 @@
               const qty = Number(order.qty || 0);
               if (price <= 0 || qty <= 0) continue;
 
-              lastHitPrice = price;
-              remainingSize -= qty;
+              const fillQty = Math.min(remainingSize, qty);
+              totalRevenueIdr += fillQty * price;
+              totalFilledQty += fillQty;
+              remainingSize -= fillQty;
+
               if (remainingSize <= 0) break;
             }
 
-            if (lastHitPrice > 0 && !isNaN(lastHitPrice)) {
-              const netTakerPrice = lastHitPrice * (1 - config.takerFee);
+            if (totalFilledQty > 0) {
+              const vwapPrice = totalRevenueIdr / totalFilledQty;
+              const netTakerPrice = vwapPrice * (1 - config.takerFee);
               tEl.textContent = "Rp " + Math.floor(netTakerPrice).toLocaleString("id-ID");
             } else {
               tEl.textContent = "Rp -";
