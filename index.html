@@ -589,10 +589,47 @@
     }
 
     async function fetchIndodax() {
-      const book = await fetchJsonWithCandidates(["https://indodax.com/api/depth/usdtidr", "https://indodax.com/api/depth/usdt_idr"]);
-      const bids = normalizePriceQtySide(book.buy || book.bids || [], "bid");
-      const asks = normalizePriceQtySide(book.sell || book.asks || [], "ask");
-      return finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() });
+      const urls = [
+        "https://indodax.com/api/depth/usdtidr",
+        "https://indodax.com/api/depth/usdt_idr"
+      ];
+      
+      let book = null;
+      let lastError = null;
+
+      for (const targetUrl of urls) {
+        try {
+          // Memaksa permintaan melewati endpoint proxy Cloudflare agar tidak terkena blokir CORS
+          const proxyUrl = `/proxy?url=${encodeURIComponent(targetUrl)}`;
+          const response = await fetch(proxyUrl, { cache: "no-store" });
+          
+          if (response.ok) {
+            book = await response.json();
+            if (book && (book.buy || book.sell || book.bids || book.asks)) {
+              break; // Berhasil mendapatkan data order book
+            }
+          }
+        } catch (e) {
+          lastError = e;
+        }
+      }
+
+      if (!book) {
+        throw new Error(lastError ? lastError.message : "Gagal mengambil data dari API Indodax");
+      }
+
+      const rawBids = book.buy || book.bids || [];
+      const rawAsks = book.sell || book.asks || [];
+
+      const bids = normalizePriceQtySide(rawBids, "bid");
+      const asks = normalizePriceQtySide(rawAsks, "ask");
+
+      return finalizeBook({ 
+        symbol: "USDTIDR", 
+        bids, 
+        asks, 
+        fetchedAt: new Date() 
+      });
     }
 
     async function fetchPintu() {
