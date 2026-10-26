@@ -291,7 +291,6 @@
     const REQUEST_TIMEOUT_MS = 14000;
 
     let currentSimMode = 'buy';
-    let indodaxCooldownUntil = 0; // POIN 4: TIMESTAMP UNTUK EXPONENTIAL BACKOFF INDODAX
     
     // Fee Structure Beli (BUY)
     const FeesBuy = {
@@ -502,12 +501,9 @@
       render();
     }
 
-    // POIN 1: PROTEKSI TAB PASIF (PAUSE COUNTDOWN JIKA TAB DI-MINIMIZE/PASIF)
     function startCountdown() {
       clearInterval(state.countdownTimer);
       state.countdownTimer = setInterval(() => {
-        if (document.hidden) return; // Jika tab tidak aktif, jeda countdown
-
         state.countdown -= 1;
         if (state.countdown <= 0) {
           state.countdown = REFRESH_SECONDS;
@@ -592,32 +588,11 @@
       }
     }
 
-    // POIN 4: EXPONENTIAL BACKOFF UNTUK INDODAX
     async function fetchIndodax() {
-      const now = Date.now();
-      if (now < indodaxCooldownUntil) {
-        const remainingSec = Math.ceil((indodaxCooldownUntil - now) / 1000);
-        throw new Error(`Rate Limited (Cooldown ${remainingSec}s)`);
-      }
-
-      try {
-        const book = await fetchJsonWithCandidates([
-          "https://indodax.com/api/depth/usdtidr",
-          "https://indodax.com/api/depth/usdt_idr"
-        ]);
-        
-        indodaxCooldownUntil = 0; // Reset cooldown saat sukses
-
-        const bids = normalizePriceQtySide(book.buy || book.bids || [], "bid");
-        const asks = normalizePriceQtySide(book.sell || book.asks || [], "ask");
-        return finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() });
-      } catch (error) {
-        if (error.message && (error.message.includes("429") || error.message.includes("Too Many Requests"))) {
-          indodaxCooldownUntil = Date.now() + (5 * 60 * 1000); // Istirahat 5 menit
-          console.error("Indodax terkena 429. Cooldown 5 menit diaktifkan.");
-        }
-        throw error;
-      }
+      const book = await fetchJsonWithCandidates(["https://indodax.com/api/depth/usdtidr", "https://indodax.com/api/depth/usdt_idr"]);
+      const bids = normalizePriceQtySide(book.buy || book.bids || [], "bid");
+      const asks = normalizePriceQtySide(book.sell || book.asks || [], "ask");
+      return finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() });
     }
 
     async function fetchPintu() {
@@ -923,7 +898,7 @@
           let totalRevenueIdr = 0;
           let totalFilledQty = 0;
 
-          const sortedBids = Array.isArray(data.bids) ? [...data.bids].sort((a, b) => b.price - a.price);
+          const sortedBids = Array.isArray(data.bids) ? [...data.bids].sort((a, b) => b.price - a.price) : [];
 
           if (sortedBids.length > 0) {
             for (const order of sortedBids) {
