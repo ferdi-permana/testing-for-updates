@@ -589,35 +589,42 @@
     }
 
     async function fetchIndodax() {
-      const urls = [
+      // Daftar candidate URL Indodax
+      const targetUrls = [
         "https://indodax.com/api/depth/usdtidr",
         "https://indodax.com/api/depth/usdt_idr"
       ];
-      
-      let book = null;
-      let lastError = null;
 
-      for (const targetUrl of urls) {
+      let book = null;
+
+      for (const targetUrl of targetUrls) {
         try {
-          // Memaksa permintaan melewati endpoint proxy Cloudflare agar tidak terkena blokir CORS
-          const proxyUrl = `/proxy?url=${encodeURIComponent(targetUrl)}`;
-          const response = await fetch(proxyUrl, { cache: "no-store" });
+          // Opsi 1: Coba lewat proxy Cloudflare internal kamu
+          let response = await fetch(`/proxy?url=${encodeURIComponent(targetUrl)}`, { cache: "no-store" });
           
+          // Opsi 2: Jika proxy internal gagal/404, gunakan Public CORS Proxy
+          if (!response.ok) {
+            response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, { cache: "no-store" });
+          }
+
           if (response.ok) {
-            book = await response.json();
-            if (book && (book.buy || book.sell || book.bids || book.asks)) {
-              break; // Berhasil mendapatkan data order book
+            const data = await response.json();
+            // Indodax mengembalikan objek buy/sell atau return data mentah
+            if (data && (data.buy || data.sell || data.bids || data.asks)) {
+              book = data;
+              break;
             }
           }
         } catch (e) {
-          lastError = e;
+          console.warn(`Gagal fetch Indodax via ${targetUrl}:`, e);
         }
       }
 
       if (!book) {
-        throw new Error(lastError ? lastError.message : "Gagal mengambil data dari API Indodax");
+        throw new Error("Gagal memuat data dari seluruh endpoint Indodax.");
       }
 
+      // Normalisasi data Indodax (buy = bids, sell = asks)
       const rawBids = book.buy || book.bids || [];
       const rawAsks = book.sell || book.asks || [];
 
