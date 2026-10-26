@@ -588,43 +588,49 @@
       }
     }
 
-    async function fetchIndodax() {
-      // Daftar candidate URL Indodax
-      const targetUrls = [
-        "https://indodax.com/api/depth/usdtidr",
-        "https://indodax.com/api/depth/usdt_idr"
-      ];
-
+   async function fetchIndodax() {
+      // 1. Gunakan endpoint publik alternatif Indodax yang lebih longgar rate limit-nya
+      const targetUrl = "https://indodax.com/api/depth/usdtidr";
+      
       let book = null;
 
-      for (const targetUrl of targetUrls) {
-        try {
-          // Opsi 1: Coba lewat proxy Cloudflare internal kamu
-          let response = await fetch(`/proxy?url=${encodeURIComponent(targetUrl)}`, { cache: "no-store" });
-          
-          // Opsi 2: Jika proxy internal gagal/404, gunakan Public CORS Proxy
-          if (!response.ok) {
-            response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, { cache: "no-store" });
+      // Opsi 1: Coba dengan Public CORS Proxy (AllOrigins) yang mengubah IP origin
+      try {
+        const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, { cache: "no-store" });
+        if (response.ok) {
+          const data = await response.json();
+          if (data && (data.buy || data.sell || data.bids || data.asks)) {
+            book = data;
           }
+        }
+      } catch (e) {
+        console.warn("AllOrigins proxy gagal, mencoba jalur proxy internal...", e);
+      }
 
+      // Opsi 2: Cadangan ke Corsproxy.io jika Opsi 1 gagal
+      if (!book) {
+        try {
+          const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, { cache: "no-store" });
           if (response.ok) {
             const data = await response.json();
-            // Indodax mengembalikan objek buy/sell atau return data mentah
             if (data && (data.buy || data.sell || data.bids || data.asks)) {
               book = data;
-              break;
             }
           }
         } catch (e) {
-          console.warn(`Gagal fetch Indodax via ${targetUrl}:`, e);
+          console.warn("Corsproxy gagal:", e);
         }
       }
 
+      // Opsi 3: Terakhir coba proxy Cloudflare internal
       if (!book) {
-        throw new Error("Gagal memuat data dari seluruh endpoint Indodax.");
+        const response = await fetch(`/proxy?url=${encodeURIComponent(targetUrl)}`, { cache: "no-store" });
+        if (!response.ok) {
+          throw new Error(`Indodax Rate Limit / Error (${response.status})`);
+        }
+        book = await response.json();
       }
 
-      // Normalisasi data Indodax (buy = bids, sell = asks)
       const rawBids = book.buy || book.bids || [];
       const rawAsks = book.sell || book.asks || [];
 
