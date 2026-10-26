@@ -291,6 +291,7 @@
     const REQUEST_TIMEOUT_MS = 14000;
 
     let currentSimMode = 'buy';
+    let indodaxCooldownUntil = 0; // POIN 4: TIMESTAMP UNTUK EXPONENTIAL BACKOFF INDODAX
     
     // Fee Structure Beli (BUY)
     const FeesBuy = {
@@ -501,9 +502,12 @@
       render();
     }
 
+    // POIN 1: PROTEKSI TAB PASIF (PAUSE COUNTDOWN JIKA TAB DI-MINIMIZE/PASIF)
     function startCountdown() {
       clearInterval(state.countdownTimer);
       state.countdownTimer = setInterval(() => {
+        if (document.hidden) return; // Jika tab tidak aktif, jeda countdown
+
         state.countdown -= 1;
         if (state.countdown <= 0) {
           state.countdown = REFRESH_SECONDS;
@@ -588,61 +592,32 @@
       }
     }
 
-   async function fetchIndodax() {
-      // 1. Gunakan endpoint publik alternatif Indodax yang lebih longgar rate limit-nya
-      const targetUrl = "https://indodax.com/api/depth/usdtidr";
-      
-      let book = null;
+    // POIN 4: EXPONENTIAL BACKOFF UNTUK INDODAX
+    async function fetchIndodax() {
+      const now = Date.now();
+      if (now < indodaxCooldownUntil) {
+        const remainingSec = Math.ceil((indodaxCooldownUntil - now) / 1000);
+        throw new Error(`Rate Limited (Cooldown ${remainingSec}s)`);
+      }
 
-      // Opsi 1: Coba dengan Public CORS Proxy (AllOrigins) yang mengubah IP origin
       try {
-        const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(targetUrl)}`, { cache: "no-store" });
-        if (response.ok) {
-          const data = await response.json();
-          if (data && (data.buy || data.sell || data.bids || data.asks)) {
-            book = data;
-          }
+        const book = await fetchJsonWithCandidates([
+          "https://indodax.com/api/depth/usdtidr",
+          "https://indodax.com/api/depth/usdt_idr"
+        ]);
+        
+        indodaxCooldownUntil = 0; // Reset cooldown saat sukses
+
+        const bids = normalizePriceQtySide(book.buy || book.bids || [], "bid");
+        const asks = normalizePriceQtySide(book.sell || book.asks || [], "ask");
+        return finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() });
+      } catch (error) {
+        if (error.message && (error.message.includes("429") || error.message.includes("Too Many Requests"))) {
+          indodaxCooldownUntil = Date.now() + (5 * 60 * 1000); // Istirahat 5 menit
+          console.error("Indodax terkena 429. Cooldown 5 menit diaktifkan.");
         }
-      } catch (e) {
-        console.warn("AllOrigins proxy gagal, mencoba jalur proxy internal...", e);
+        throw error;
       }
-
-      // Opsi 2: Cadangan ke Corsproxy.io jika Opsi 1 gagal
-      if (!book) {
-        try {
-          const response = await fetch(`https://corsproxy.io/?${encodeURIComponent(targetUrl)}`, { cache: "no-store" });
-          if (response.ok) {
-            const data = await response.json();
-            if (data && (data.buy || data.sell || data.bids || data.asks)) {
-              book = data;
-            }
-          }
-        } catch (e) {
-          console.warn("Corsproxy gagal:", e);
-        }
-      }
-
-      // Opsi 3: Terakhir coba proxy Cloudflare internal
-      if (!book) {
-        const response = await fetch(`/proxy?url=${encodeURIComponent(targetUrl)}`, { cache: "no-store" });
-        if (!response.ok) {
-          throw new Error(`Indodax Rate Limit / Error (${response.status})`);
-        }
-        book = await response.json();
-      }
-
-      const rawBids = book.buy || book.bids || [];
-      const rawAsks = book.sell || book.asks || [];
-
-      const bids = normalizePriceQtySide(rawBids, "bid");
-      const asks = normalizePriceQtySide(rawAsks, "ask");
-
-      return finalizeBook({ 
-        symbol: "USDTIDR", 
-        bids, 
-        asks, 
-        fetchedAt: new Date() 
-      });
     }
 
     async function fetchPintu() {
@@ -948,7 +923,7 @@
           let totalRevenueIdr = 0;
           let totalFilledQty = 0;
 
-          const sortedBids = Array.isArray(data.bids) ? [...data.bids].sort((a, b) => b.price - a.price) : [];
+          const sortedBids = Array.isArray(data.bids) ? [...data.bids].sort((a, b) => b.price - a.price);
 
           if (sortedBids.length > 0) {
             for (const order of sortedBids) {
