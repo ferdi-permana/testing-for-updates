@@ -606,24 +606,6 @@
       return finalizeBook({ symbol: data.symbol || "USDT-IDR", bids, asks, fetchedAt: new Date() });
     }
 
-    // --- SISIPAN FUNGSI BARU: SYNC DATA BCA KE BACKEND API ---
-    async function syncBcaToApi(bcaData) {
-      if (!bcaData || bcaData.error || !bcaData.buy || !bcaData.sell) return;
-      try {
-        await fetch("/api/erate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            harga_beli: bcaData.buy,
-            harga_jual: bcaData.sell,
-            tanggal_jam: bcaData.updatedAtText || "BCA Live"
-          })
-        });
-      } catch (err) {
-        console.warn("Gagal otomatis mengirimkan data BCA ke API Backend:", err);
-      }
-    }
-
     async function fetchBcaRate() {
       const html = await fetchText("https://www.bca.co.id/id/informasi/kurs");
       const doc = new DOMParser().parseFromString(html, "text/html");
@@ -632,18 +614,7 @@
       const usdMatch = text.match(/USD\s+E-Rate\s+Beli\s+([\d.,]+)\s+Jual\s+([\d.,]+)/i) || text.match(/USD\s+([\d.,]+)\s+([\d.,]+)\s+[\d.,]+/i);
 
       if (!usdMatch) throw new Error("Format USD e-Rate BCA tidak terbaca.");
-
-      const bcaResult = { 
-        buy: parseLocaleNumber(usdMatch[1]), 
-        sell: parseLocaleNumber(usdMatch[2]), 
-        updatedAtText: updateMatch ? normalizeSpace(updateMatch[1]) : "BCA Live", 
-        fetchedAt: new Date() 
-      };
-
-      // --- SISIPAN PANGGILAN FUNGSI SYNC ---
-      syncBcaToApi(bcaResult);
-
-      return bcaResult;
+      return { buy: parseLocaleNumber(usdMatch[1]), sell: parseLocaleNumber(usdMatch[2]), updatedAtText: updateMatch ? normalizeSpace(updateMatch[1]) : "BCA Live", fetchedAt: new Date() };
     }
 
     async function fetchText(url) {
@@ -779,7 +750,32 @@
     }
     function updateThemeUI(isDark) {
       const icon = document.getElementById("theme-icon"); const text = document.getElementById("theme-text");
-      if (icon) icon.textContent = isDark ? "☀️" : "🌙"; if (text) text.textContent = isDark ? "Mode Terang" : "Mode Gelap"; 
+      if (icon) icon.textContent = isDark ? "☀" : "🌙"; if (text) text.textContent = isDark ? "Mode Terang" : "Mode Gelap"; 
+    }
+
+    async function syncOrderBookToApi() {
+      if (!state.exchanges) return;
+
+      const payloadData = {};
+      exchangeConfigs.forEach((config) => {
+        const data = state.exchanges[config.key];
+        if (data && !data.error) {
+          payloadData[config.key] = {
+            bids: (data.bids || []).slice(0, 10).map(b => ({ price: b.price, qty: b.qty, notional: b.price * b.qty })),
+            asks: (data.asks || []).slice(0, 10).map(a => ({ price: a.price, qty: a.qty, notional: a.price * a.qty }))
+          };
+        }
+      });
+
+      try {
+        await fetch("/api/orderbook", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: payloadData })
+        });
+      } catch (err) {
+        console.warn("Gagal sync orderbook ke API backend:", err);
+      }
     }
 
     function renderExchanges() {
@@ -817,6 +813,8 @@
         setBookRows(`${config.key}-bids`, finalBids, "bid");
         setBookRows(`${config.key}-asks`, finalAsks, "ask");
       });
+
+      syncOrderBookToApi();
     }
 
     // SIMULATOR MAKER & TAKER (VWAP) DENGAN STRICT ROUNDING
