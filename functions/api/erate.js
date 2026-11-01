@@ -1,60 +1,55 @@
-let bcaCache = {
-  harga_beli: 0,
-  harga_jual: 0,
-  tanggal_jam: "-",
-  last_updated: null
-};
-
 export async function onRequest(context) {
-  const { request } = context;
   const corsHeaders = {
     "Content-Type": "application/json; charset=utf-8",
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type"
   };
 
-  // Handle preflight request CORS
-  if (request.method === "OPTIONS") {
+  if (context.request.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // 1. JIKA WEB TOOLS MENGIRIM DATA BARU (POST DARI INDEX.HTML)
-  if (request.method === "POST") {
-    try {
-      const body = await request.json();
-      
-      // Simpan data ke cache
-      bcaCache = {
-        harga_beli: body.buy || body.harga_beli || 0,
-        harga_jual: body.sell || body.harga_jual || 0,
-        tanggal_jam: body.updatedAtText || body.tanggal_jam || new Date().toLocaleString("id-ID", { timeZone: "Asia/Jakarta" }),
-        last_updated: new Date().toISOString()
-      };
+  try {
+    const { origin } = new URL(context.request.url);
 
-      return new Response(JSON.stringify({ status: "success", message: "Data BCA berhasil disimpan ke API cache" }), {
-        status: 200,
-        headers: corsHeaders
-      });
-    } catch (err) {
-      return new Response(JSON.stringify({ status: "error", message: err.message }), { status: 400, headers: corsHeaders });
+    // Memanggil ENGINE DATA INTERNAL web tools Anda (functions/proxy.js)
+    // Tanpa menyebut atau menembak URL BCA sama sekali
+    const response = await fetch(`${origin}/proxy?source=bca`);
+
+    if (!response.ok) {
+      throw new Error(`Engine internal web tools merespon HTTP ${response.status}`);
     }
-  }
 
-  // 2. JIKA GOOGLE SHEETS MEMANGGIL API (GET /api/erate)
-  return new Response(
-    JSON.stringify({
+    const internalData = await response.json();
+
+    // Merapikan data keluaran engine web tools Anda menjadi format API
+    const payload = {
       status: "success",
-      source: "web-tools-cache",
+      source: "web-tools-engine",
+      currency: "USD/IDR",
       data: {
-        harga_beli: bcaCache.harga_beli,
-        harga_jual: bcaCache.harga_jual,
-        tanggal_jam: bcaCache.tanggal_jam
+        harga_beli: internalData.harga_beli || internalData.buy || 0,
+        harga_jual: internalData.harga_jual || internalData.sell || 0,
+        tanggal_jam: internalData.tanggal_jam || internalData.updatedAtText || internalData.timestamp || "BCA Live"
       }
-    }, null, 2),
-    {
+    };
+
+    return new Response(JSON.stringify(payload, null, 2), {
       status: 200,
       headers: corsHeaders
-    }
-  );
+    });
+
+  } catch (error) {
+    return new Response(
+      JSON.stringify({
+        status: "error",
+        message: error.message
+      }, null, 2),
+      {
+        status: 500,
+        headers: corsHeaders
+      }
+    );
+  }
 }
