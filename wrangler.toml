@@ -1,0 +1,9 @@
+name = "testing-for-updates"
+compatibility_date = "2024-01-01"
+
+[triggers]
+crons = ["*/1 * * * *"]
+
+[[kv_namespaces]]
+binding = "ORDERBOOK_KV"
+id = "52a36524a03b4bfdb2a8ab4cdd482eb6"
