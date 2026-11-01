@@ -1,5 +1,3 @@
-let cachedOrderBookData = null;
-
 export async function onRequest(context) {
   const corsHeaders = {
     "Content-Type": "application/json; charset=utf-8",
@@ -12,42 +10,132 @@ export async function onRequest(context) {
     return new Response(null, { headers: corsHeaders });
   }
 
-  // METHOD POST: Menerima kiriman data matang dari Web Tools Anda di Browser
+  const { origin } = new URL(context.request.url);
+
   if (context.request.method === "POST") {
     try {
-      const body = await context.request.json();
-      cachedOrderBookData = {
+      let payloadData = null;
+      const contentType = context.request.headers.get("content-type") || "";
+
+      if (contentType.includes("application/json")) {
+        const body = await context.request.json();
+        payloadData = body.data;
+      }
+
+      if (!payloadData) {
+        payloadData = await fetchOrderBookFromInternalProxy(origin);
+      }
+
+      const cachePayload = {
         status: "success",
-        source: "web-tools-pushed-data",
+        source: "web-tools-kv-storage",
         updatedAt: new Date().toISOString(),
-        data: body.data
+        data: payloadData
       };
 
-      return new Response(JSON.stringify({ status: "success", message: "Data orderbook berhasil tersimpan di API" }), {
+      if (context.env && context.env.ORDERBOOK_KV) {
+        await context.env.ORDERBOOK_KV.put("LATEST_ORDERBOOK", JSON.stringify(cachePayload));
+      }
+
+      return new Response(JSON.stringify({ status: "success", message: "Data orderbook tersimpan di KV Storage 24/7" }), {
         status: 200,
         headers: corsHeaders
       });
+
     } catch (err) {
-      return new Response(JSON.stringify({ status: "error", message: err.message }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ status: "error", message: err.message }), { status: 500, headers: corsHeaders });
     }
   }
 
-  // METHOD GET: Menyajikan data matang ke Google Sheets (TIDAK ADA FETCH KELUAR SAMA SEKALI)
   if (context.request.method === "GET") {
-    if (!cachedOrderBookData) {
-      return new Response(
-        JSON.stringify({
-          status: "waiting",
-          message: "Data Order Book belum dikirim dari Web Tools. Silakan buka Web Tools Anda terlebih dahulu.",
-          data: { reku: { bids: [], asks: [] }, indodax: { bids: [], asks: [] }, tokocrypto: { bids: [], asks: [] }, pintu: { bids: [], asks: [] } }
-        }, null, 2),
-        { status: 200, headers: corsHeaders }
-      );
-    }
+    try {
+      let cachedData = null;
 
-    return new Response(JSON.stringify(cachedOrderBookData, null, 2), {
-      status: 200,
-      headers: corsHeaders
-    });
+      // 1. Ambil data dari KV Storage
+      if (context.env && context.env.ORDERBOOK_KV) {
+        const rawKv = await context.env.ORDERBOOK_KV.get("LATEST_ORDERBOOK");
+        if (rawKv) {
+          cachedData = JSON.parse(rawKv);
+        }
+      }
+
+      if (!cachedData) {
+        const freshData = await fetchOrderBookFromInternalProxy(origin);
+        cachedData = {
+          status: "success",
+          source: "web-tools-auto-fallback",
+          updatedAt: new Date().toISOString(),
+          data: freshData
+        };
+
+        if (context.env && context.env.ORDERBOOK_KV) {
+          await context.env.ORDERBOOK_KV.put("LATEST_ORDERBOOK", JSON.stringify(cachedData));
+        }
+      }
+
+      return new Response(JSON.stringify(cachedData, null, 2), {
+        status: 200,
+        headers: corsHeaders
+      });
+
+    } catch (err) {
+      return new Response(JSON.stringify({ status: "error", message: err.message }), { status: 500, headers: corsHeaders });
+    }
   }
+}
+
+async function fetchOrderBookFromInternalProxy(origin) {
+  const [rekuRes, indodaxRes, tokoRes, pintuRes] = await Promise.allSettled([
+    fetch(`${origin}/proxy?url=${encodeURIComponent("https://api.reku.id/v2/orderbook?symbol=USDT_IDR")}`),
+    fetch(`${origin}/proxy?url=${encodeURIComponent("https://indodax.com/api/depth/usdtidr")}`),
+    fetch(`${origin}/proxy?url=${encodeURIComponent("https://data-api.binance.vision/api/v3/depth?symbol=USDTIDR&limit=100")}`),
+    fetch(`${origin}/proxy?url=${encodeURIComponent("https://api.pintu.pro/v1/public/get-book?symbol=USDT-IDR&depth=20")}`)
+  ]);
+
+  const parseSide = (arr) => {
+    if (!Array.isArray(arr)) return [];
+    return arr.map(item => {
+      let price = 0, qty = 0;
+      if (Array.isArray(item)) {
+        price = parseFloat(item[0]) || 0;
+        qty = parseFloat(item[1]) || 0;
+      } else if (typeof item === 'object' && item !== null) {
+        price = parseFloat(item.price || item.p) || 0;
+        qty = parseFloat(item.volume || item.qty || item.v) || 0;
+      }
+      return { price, qty, notional: price * qty };
+    }).filter(row => row.price > 0 && row.qty > 0);
+  };
+
+  const cleanBook = (bidsRaw, asksRaw) => ({
+    bids: parseSide(bidsRaw).sort((a, b) => b.price - a.price).slice(0, 10),
+    asks: parseSide(asksRaw).sort((a, b) => a.price - b.price).slice(0, 10)
+  });
+
+  let reku = { bids: [], asks: [] };
+  if (rekuRes.status === "fulfilled" && rekuRes.value.ok) {
+    const j = await rekuRes.value.json();
+    reku = cleanBook(j.bids || j.b || [], j.asks || j.s || []);
+  }
+
+  let indodax = { bids: [], asks: [] };
+  if (indodaxRes.status === "fulfilled" && indodaxRes.value.ok) {
+    const j = await indodaxRes.value.json();
+    indodax = cleanBook(j.buy || j.bids || [], j.sell || j.asks || []);
+  }
+
+  let tokocrypto = { bids: [], asks: [] };
+  if (tokoRes.status === "fulfilled" && tokoRes.value.ok) {
+    const j = await tokoRes.value.json();
+    tokocrypto = cleanBook(j.bids || [], j.asks || []);
+  }
+
+  let pintu = { bids: [], asks: [] };
+  if (pintuRes.status === "fulfilled" && pintuRes.value.ok) {
+    const j = await pintuRes.value.json();
+    const payload = j.data || j;
+    pintu = cleanBook(payload.bids || [], payload.asks || []);
+  }
+
+  return { reku, indodax, tokocrypto, pintu };
 }
