@@ -55,12 +55,16 @@ export async function onRequest(context) {
   try {
     const url = new URL(context.request.url);
     
-    // Ambil Parameter dari URL (dengan default value)
-    const mode = (url.searchParams.get("mode") || "buy").toLowerCase(); // buy / sell
-    const amount = parseFloat(url.searchParams.get("amount") || "100"); // Jumlah USDT
+    const mode = (url.searchParams.get("mode") || "buy").toLowerCase();
+
+    let amount = parseFloat(url.searchParams.get("amount"));
+    if (isNaN(amount) || amount <= 0) {
+      amount = 100;
+    }
+
     const indodaxLvl = (url.searchParams.get("indodax_lvl") || "regular").toLowerCase();
     const tokoLvl = (url.searchParams.get("toko_lvl") || "regular").toLowerCase();
-    
+
     let orderBookData = null;
     if (context.env && context.env.ORDERBOOK_KV) {
       const rawKv = await context.env.ORDERBOOK_KV.get("LATEST_ORDERBOOK");
@@ -73,7 +77,7 @@ export async function onRequest(context) {
     if (!orderBookData) {
       return new Response(JSON.stringify({
         status: "error",
-        message: "Data Order Book belum tersedia di KV Storage. Jalankan /api/orderbook terlebih dahulu."
+        message: "Data Order Book belum tersedia di KV Storage."
       }, null, 2), { status: 400, headers: corsHeaders });
     }
 
@@ -91,14 +95,28 @@ export async function onRequest(context) {
       return mode === "buy" ? Math.ceil(val - 1e-9) : Math.floor(val + 1e-9);
     };
 
+    const normalizeOrders = (arr) => {
+      if (!Array.isArray(arr)) return [];
+      return arr.map(item => {
+        let price = 0, qty = 0;
+        if (Array.isArray(item)) {
+          price = parseFloat(item[0]) || 0;
+          qty = parseFloat(item[1]) || 0;
+        } else if (typeof item === 'object' && item !== null) {
+          price = parseFloat(item.price || item.p) || 0;
+          qty = parseFloat(item.volume || item.qty || item.v) || 0;
+        }
+        return { price, qty };
+      }).filter(x => x.price > 0 && x.qty > 0);
+    };
+
     const results = {};
 
-    // 3. Kalkulasi Simulasi per Exchange
     Object.keys(ratesConfig).forEach((key) => {
       const data = orderBookData[key];
       const config = ratesConfig[key];
 
-      if (!data || !config || amount <= 0) {
+      if (!data || !config) {
         results[key] = { maker: 0, taker: 0 };
         return;
       }
@@ -106,25 +124,25 @@ export async function onRequest(context) {
       let makerPrice = 0;
       let takerPrice = 0;
 
-      if (mode === "buy") {
+      const bids = normalizeOrders(data.bids);
+      const asks = normalizeOrders(data.asks);
 
-        const bestBid = data.bids && data.bids[0] ? data.bids[0].price : 0;
+      if (mode === "buy") {
+        // MAKER BUY
+        const bestBid = bids.length > 0 ? bids[0].price : 0;
         if (bestBid > 0) {
           makerPrice = processRounding(bestBid * (1 + config.makerFee));
         }
 
+        // TAKER BUY (VWAP Asks)
         let remainingSize = amount;
         let totalCostIdr = 0;
         let totalFilledQty = 0;
-        const sortedAsks = Array.isArray(data.asks) ? [...data.asks].sort((a, b) => a.price - b.price) : [];
+        const sortedAsks = [...asks].sort((a, b) => a.price - b.price);
 
         for (const order of sortedAsks) {
-          const price = Number(order.price || 0);
-          const qty = Number(order.qty || 0);
-          if (price <= 0 || qty <= 0) continue;
-
-          const fillQty = Math.min(remainingSize, qty);
-          totalCostIdr += fillQty * price;
+          const fillQty = Math.min(remainingSize, order.qty);
+          totalCostIdr += fillQty * order.price;
           totalFilledQty += fillQty;
           remainingSize -= fillQty;
 
@@ -137,25 +155,21 @@ export async function onRequest(context) {
         }
 
       } else {
-        
-        const bestAsk = data.asks && data.asks[0] ? data.asks[0].price : 0;
+        // MAKER SELL
+        const bestAsk = asks.length > 0 ? asks[0].price : 0;
         if (bestAsk > 0) {
           makerPrice = processRounding(bestAsk * (1 - config.makerFee));
         }
 
-
+        // TAKER SELL (VWAP Bids)
         let remainingSize = amount;
         let totalRevenueIdr = 0;
         let totalFilledQty = 0;
-        const sortedBids = Array.isArray(data.bids) ? [...data.bids].sort((a, b) => b.price - a.price) : [];
+        const sortedBids = [...bids].sort((a, b) => b.price - a.price);
 
         for (const order of sortedBids) {
-          const price = Number(order.price || 0);
-          const qty = Number(order.qty || 0);
-          if (price <= 0 || qty <= 0) continue;
-
-          const fillQty = Math.min(remainingSize, qty);
-          totalRevenueIdr += fillQty * price;
+          const fillQty = Math.min(remainingSize, order.qty);
+          totalRevenueIdr += fillQty * order.price;
           totalFilledQty += fillQty;
           remainingSize -= fillQty;
 
@@ -174,21 +188,12 @@ export async function onRequest(context) {
       };
     });
 
-    const responsePayload = {
+    return new Response(JSON.stringify({
       status: "success",
       timestamp: new Date().toISOString(),
-      params: {
-        mode,
-        amount,
-        levels: {
-          indodax: indodaxLvl,
-          tokocrypto: tokoLvl
-        }
-      },
+      params: { mode, amount, levels: { indodax: indodaxLvl, tokocrypto: tokoLvl } },
       data: results
-    };
-
-    return new Response(JSON.stringify(responsePayload, null, 2), {
+    }, null, 2), {
       status: 200,
       headers: corsHeaders
     });
