@@ -51,7 +51,6 @@ export async function onRequest(context) {
     try {
       let cachedData = null;
 
-      // 1. Ambil data dari KV Storage
       if (context.env && context.env.ORDERBOOK_KV) {
         const rawKv = await context.env.ORDERBOOK_KV.get("LATEST_ORDERBOOK");
         if (rawKv) {
@@ -85,10 +84,22 @@ export async function onRequest(context) {
 }
 
 async function fetchOrderBookFromInternalProxy(origin) {
+  const customHeaders = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json"
+  };
+
   const [rekuRes, indodaxRes, tokoRes, pintuRes] = await Promise.allSettled([
-    fetch(`${origin}/proxy?url=${encodeURIComponent("https://api.reku.id/v2/orderbook?symbol=USDT_IDR")}`),
+    // Reku: Tambahkan headers User-Agent agar tidak diblokir
+    fetch("https://api.reku.id/v2/orderbook?symbol=USDT_IDR", { headers: customHeaders }),
+    
+    // Indodax via Proxy
     fetch(`${origin}/proxy?url=${encodeURIComponent("https://indodax.com/api/depth/usdtidr")}`),
-    fetch(`${origin}/proxy?url=${encodeURIComponent("https://data-api.binance.vision/api/v3/depth?symbol=USDTIDR&limit=100")}`),
+    
+    // Tokocrypto: Lewatkan via Proxy Internal dan limit 20
+    fetch(`${origin}/proxy?url=${encodeURIComponent("https://data-api.binance.vision/api/v3/depth?symbol=USDTIDR&limit=20")}`),
+    
+    // Pintu Pro via Proxy
     fetch(`${origin}/proxy?url=${encodeURIComponent("https://api.pintu.pro/v1/public/get-book?symbol=USDT-IDR&depth=20")}`)
   ]);
 
