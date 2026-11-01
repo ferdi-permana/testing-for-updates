@@ -606,6 +606,24 @@
       return finalizeBook({ symbol: data.symbol || "USDT-IDR", bids, asks, fetchedAt: new Date() });
     }
 
+    // --- SISIPAN FUNGSI BARU: SYNC DATA BCA KE BACKEND API ---
+    async function syncBcaToApi(bcaData) {
+      if (!bcaData || bcaData.error || !bcaData.buy || !bcaData.sell) return;
+      try {
+        await fetch("/api/erate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            harga_beli: bcaData.buy,
+            harga_jual: bcaData.sell,
+            tanggal_jam: bcaData.updatedAtText || "BCA Live"
+          })
+        });
+      } catch (err) {
+        console.warn("Gagal otomatis mengirimkan data BCA ke API Backend:", err);
+      }
+    }
+
     async function fetchBcaRate() {
       const html = await fetchText("https://www.bca.co.id/id/informasi/kurs");
       const doc = new DOMParser().parseFromString(html, "text/html");
@@ -614,7 +632,18 @@
       const usdMatch = text.match(/USD\s+E-Rate\s+Beli\s+([\d.,]+)\s+Jual\s+([\d.,]+)/i) || text.match(/USD\s+([\d.,]+)\s+([\d.,]+)\s+[\d.,]+/i);
 
       if (!usdMatch) throw new Error("Format USD e-Rate BCA tidak terbaca.");
-      return { buy: parseLocaleNumber(usdMatch[1]), sell: parseLocaleNumber(usdMatch[2]), updatedAtText: updateMatch ? normalizeSpace(updateMatch[1]) : "BCA Live", fetchedAt: new Date() };
+
+      const bcaResult = { 
+        buy: parseLocaleNumber(usdMatch[1]), 
+        sell: parseLocaleNumber(usdMatch[2]), 
+        updatedAtText: updateMatch ? normalizeSpace(updateMatch[1]) : "BCA Live", 
+        fetchedAt: new Date() 
+      };
+
+      // --- SISIPAN PANGGILAN FUNGSI SYNC ---
+      syncBcaToApi(bcaResult);
+
+      return bcaResult;
     }
 
     async function fetchText(url) {
@@ -750,7 +779,7 @@
     }
     function updateThemeUI(isDark) {
       const icon = document.getElementById("theme-icon"); const text = document.getElementById("theme-text");
-      if (icon) icon.textContent = isDark ? "☀" : "🌙"; if (text) text.textContent = isDark ? "Mode Terang" : "Mode Gelap"; 
+      if (icon) icon.textContent = isDark ? "☀️" : "🌙"; if (text) text.textContent = isDark ? "Mode Terang" : "Mode Gelap"; 
     }
 
     function renderExchanges() {
