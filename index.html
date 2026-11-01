@@ -7,6 +7,9 @@
   
   <link rel="icon" type="image/png" href="logo.png">
 
+  <!-- Library html2canvas untuk fitur Screenshot ke Clipboard -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
   <style>
     :root {
       --bg: #f5f7f9;
@@ -192,6 +195,7 @@
         <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">
           <span id="theme-icon">🌙</span> <span id="theme-text">Mode Gelap</span>
         </button>
+        <button class="primary" id="screenshot-btn" type="button" onclick="copyScreenshot()">📸 Salin Screenshot</button>
         <span class="pill" id="cycle-status"><span class="status-dot delayed"></span><span>Menunggu data</span></span>
         <span class="pill">Perbarui dalam: <strong id="countdown">5m 00s</strong></span>
         <button class="primary" id="refresh-button" type="button">Perbarui</button>
@@ -775,6 +779,42 @@
         });
       } catch (err) {
         console.warn("Gagal sync orderbook ke API backend:", err);
+      }
+    }
+
+    async function copyScreenshot() {
+      const btn = document.getElementById("screenshot-btn");
+      const originalText = btn.textContent;
+      
+      try {
+        btn.disabled = true;
+        btn.textContent = "Mengambil gambar...";
+
+        const element = document.querySelector(".page");
+        const canvas = await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: getComputedStyle(document.body).backgroundColor
+        });
+
+        canvas.toBlob(async (blob) => {
+          if (!blob) throw new Error("Gagal membuat blob gambar");
+          
+          const item = new ClipboardItem({ "image/png": blob });
+          await navigator.clipboard.write([item]);
+
+          btn.textContent = "✅ Gambar Tersalin!";
+          setTimeout(() => {
+            btn.textContent = originalText;
+            btn.disabled = false;
+          }, 2000);
+        });
+
+      } catch (err) {
+        console.error("Gagal menyalin screenshot:", err);
+        alert("Gagal mengambil screenshot. Pastikan izin Clipboard di browser aktif.");
+        btn.textContent = originalText;
+        btn.disabled = false;
       }
     }
 
