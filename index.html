@@ -242,7 +242,7 @@
         <button class="primary" id="refresh-button" type="button">Perbarui</button>
       </div>
     </header>
-
+    
     <div id="quote-capture-area">
       <section class="snapshot-grid" aria-label="BCA dan Simulator">
         <div class="panel bca-panel">
@@ -326,7 +326,7 @@
         </div>
       </section>
     </div>
-   
+
     <div class="orderbook-section-title">
       <h2 style="font-size:14px; font-weight:700; color:var(--muted); letter-spacing:0.05em;">TOP 10 VOLUME ORDER BOOK USDT/IDR</h2>
     </div>
@@ -855,6 +855,7 @@
 
       throw new Error("Izin Clipboard disekat oleh browser atau tidak didukung di perangkat ini.");
     }
+
     async function copyScreenshot() {
       const btn = document.getElementById("screenshot-btn");
       const originalText = btn.textContent;
@@ -873,7 +874,7 @@
         canvas.toBlob(async (blob) => {
           try {
             await writeBlobToClipboard(blob);
-            showToast("✅Berhasil Screenshot");
+            showToast("✅Screenshot tersalin");
           } catch (err) {
             console.error(err);
             showToast("❌ Gagal menyalin gambar ke Clipboard", "error");
@@ -911,7 +912,7 @@
         canvas.toBlob(async (blob) => {
           try {
             await writeBlobToClipboard(blob);
-            showToast("✅Berhasil Screenshot");
+            showToast("✅Screenshot tersalin");
           } catch (err) {
             console.error(err);
             showToast("❌ Gagal menyalin ke Clipboard", "error");
@@ -946,82 +947,129 @@
       }, 2500);
     }
 
-async function pushSnapshotToGsheet() {
-  const btn = document.getElementById("btn-push-gsheet");
-  const originalText = btn.textContent;
+    async function pushSnapshotToGsheet() {
+      const btn = document.getElementById("btn-push-gsheet");
+      const originalText = btn.textContent;
 
-  try {
-    btn.disabled = true;
-    btn.textContent = "Mengirim...";
+      try {
+        btn.disabled = true;
+        btn.textContent = "Mengirim...";
 
-    const sizeInput = document.getElementById("calc-usdt-size");
-    const rawAmount = sizeInput ? sizeInput.value.replace(/\./g, "") : "100";
-    const amount = parseFloat(rawAmount) || 100;
+        const sizeInput = document.getElementById("calc-usdt-size");
+        const rawAmount = sizeInput ? sizeInput.value.replace(/\./g, "") : "100";
+        const amount = parseFloat(rawAmount) || 100;
 
-    const parseRateNumber = (id) => {
-      const el = document.getElementById(id);
-      if (!el) return 0;
+        const selectedIndodaxLvl = document.getElementById("lvl-indodax") ? document.getElementById("lvl-indodax").value : "regular";
+        const selectedTokocryptoLvl = document.getElementById("lvl-tokocrypto") ? document.getElementById("lvl-tokocrypto").value : "regular";
+        const activeFeeStructure = currentSimMode === 'buy' ? FeesBuy : FeesSell;
 
-      const cleanText = el.textContent.replace(/[^0-9]/g, "");
-      return parseFloat(cleanText) || 0;
-    };
+        const targetKeys = ['indodax', 'tokocrypto', 'pintu'];
+        const validTakers = [];
 
-    const indodaxTaker = parseRateNumber("rate-t-indodax");
-    const tokoTaker    = parseRateNumber("rate-t-tokocrypto");
-    const pintuTaker   = parseRateNumber("rate-t-pintu");
+        targetKeys.forEach((key) => {
+          const data = state.exchanges[key];
+          let config = activeFeeStructure[key];
+          if (key === 'indodax') config = activeFeeStructure.indodax[selectedIndodaxLvl] || activeFeeStructure.indodax.regular;
+          if (key === 'tokocrypto') config = activeFeeStructure.tokocrypto[selectedTokocryptoLvl] || activeFeeStructure.tokocrypto.regular;
 
-    const validTakers = [indodaxTaker, tokoTaker, pintuTaker].filter(val => val > 0);
+          if (data && !data.error && config) {
+            let remainingSize = amount;
+            let totalCostIdr = 0;
+            let totalFilledQty = 0;
 
-    let bestTaker = 0;
-    if (validTakers.length > 0) {
-      bestTaker = (currentSimMode === 'sell') ? Math.max(...validTakers) : Math.min(...validTakers);
-    } else {
+            if (currentSimMode === 'buy') {
+              const sortedAsks = Array.isArray(data.asks) ? [...data.asks].sort((a, b) => a.price - b.price) : [];
+              for (const order of sortedAsks) {
+                const price = Number(order.price || 0);
+                const qty = Number(order.qty || 0);
+                if (price <= 0 || qty <= 0) continue;
+                const fillQty = Math.min(remainingSize, qty);
+                totalCostIdr += fillQty * price;
+                totalFilledQty += fillQty;
+                remainingSize -= fillQty;
+                if (remainingSize <= 1e-8) break;
+              }
+              if (totalFilledQty > 0) {
+                const vwapPrice = totalCostIdr / totalFilledQty;
+                const exactTakerPrice = vwapPrice * (1 + config.takerFee);
+                validTakers.push(Math.ceil(exactTakerPrice - 1e-9));
+              }
+            } else {
+              const sortedBids = Array.isArray(data.bids) ? [...data.bids].sort((a, b) => b.price - a.price) : [];
+              for (const order of sortedBids) {
+                const price = Number(order.price || 0);
+                const qty = Number(order.qty || 0);
+                if (price <= 0 || qty <= 0) continue;
+                const fillQty = Math.min(remainingSize, qty);
+                totalCostIdr += fillQty * price;
+                totalFilledQty += fillQty;
+                remainingSize -= fillQty;
+                if (remainingSize <= 1e-8) break;
+              }
+              if (totalFilledQty > 0) {
+                const vwapPrice = totalCostIdr / totalFilledQty;
+                const exactTakerPrice = vwapPrice * (1 - config.takerFee);
+                validTakers.push(Math.floor(exactTakerPrice + 1e-9));
+              }
+            }
+          }
+        });
 
-      bestTaker = parseRateNumber("rate-t-reku") || parseRateNumber("rate-m-reku");
+        if (validTakers.length === 0) {
+          showToast("❌ Data kurs belum lengkap/tersedia.", "error");
+          return;
+        }
+
+        let bestTaker = 0;
+        if (currentSimMode === 'buy') {
+          bestTaker = Math.min(...validTakers);
+        } else {
+          bestTaker = Math.max(...validTakers);
+        }
+
+        const now = new Date();
+        const jktDateStr = now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" });
+        const jktDate = new Date(jktDateStr);
+
+        const tanggal = String(jktDate.getDate()).padStart(2, '0') + '/' + 
+                        String(jktDate.getMonth() + 1).padStart(2, '0') + '/' + 
+                        jktDate.getFullYear();
+                        
+        const jam = String(jktDate.getHours()).padStart(2, '0') + ':' + 
+                    String(jktDate.getMinutes()).padStart(2, '0') + ':' + 
+                    String(jktDate.getSeconds()).padStart(2, '0');
+
+        const GSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwoep3n_RIF4IppNQ6Clq5GtCYvqbtdAbM5LNsMFut1H5TzG7R4Z2ENXV6M9TkGyo9R/exec";
+
+        if (!GSHEET_WEBAPP_URL || GSHEET_WEBAPP_URL.includes("PASTE_WEB_APP")) {
+          showToast("❌ Silakan isi Web App URL di file index.html terlebih dahulu", "error");
+          return;
+        }
+
+        const formData = new URLSearchParams();
+        formData.append("tanggal", tanggal);
+        formData.append("jam", jam);
+        formData.append("amount", amount);
+        formData.append("bestTaker", bestTaker);
+
+        await fetch(GSHEET_WEBAPP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: formData.toString()
+        });
+
+        showToast("✅Success");
+
+      } catch (err) {
+        console.error("Gagal push ke GSheet:", err);
+        showToast("❌ Gagal mengirim data: " + err.message, "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
     }
 
-    if (bestTaker === 0) {
-      showToast("❌ Data kurs belum siap. Harap tunggu sebentar.", "error");
-      return;
-    }
-
-    const now = new Date();
-    const jktDateStr = now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" });
-    const jktDate = new Date(jktDateStr);
-
-    const tanggal = String(jktDate.getDate()).padStart(2, '0') + '/' + 
-                    String(jktDate.getMonth() + 1).padStart(2, '0') + '/' + 
-                    jktDate.getFullYear();
-                    
-    const jam = String(jktDate.getHours()).padStart(2, '0') + ':' + 
-                String(jktDate.getMinutes()).padStart(2, '0') + ':' + 
-                String(jktDate.getSeconds()).padStart(2, '0');
-
-    const GSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwoep3n_RIF4IppNQ6Clq5GtCYvqbtdAbM5LNsMFut1H5TzG7R4Z2ENXV6M9TkGyo9R/exec";
-
-    const formData = new URLSearchParams();
-    formData.append("tanggal", tanggal);
-    formData.append("jam", jam);
-    formData.append("amount", amount);
-    formData.append("bestTaker", bestTaker);
-
-    await fetch(GSHEET_WEBAPP_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: formData.toString()
-    });
-
-    showToast("✅Success");
-
-  } catch (err) {
-    console.error("Gagal push ke GSheet:", err);
-    showToast("❌ Gagal mengirim data: " + err.message, "error");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = originalText;
-  }
-}
     function renderExchanges() {
       exchangeConfigs.forEach((config) => {
         const data = state.exchanges[config.key];
