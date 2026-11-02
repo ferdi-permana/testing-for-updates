@@ -238,7 +238,7 @@
         <button class="primary" id="screenshot-btn" type="button" onclick="copyScreenshot()">📸</button>
         <button class="success" id="btn-push-gsheet" type="button" onclick="pushSnapshotToGsheet()">Request</button>
         <span class="pill" id="cycle-status"><span class="status-dot delayed"></span><span>Menunggu data</span></span>
-        <span class="pill">Perbarui dalam: <strong id="countdown">5m 00s</strong></span>
+        <span class="pill">Perbarui dalam: <strong id="countdown">10m 00s</strong></span>
         <button class="primary" id="refresh-button" type="button">Perbarui</button>
       </div>
     </header>
@@ -325,12 +325,12 @@
           </div>
         </div>
       </section>
-
-      <div class="orderbook-section-title">
-        <h2 style="font-size:14px; font-weight:700; color:var(--muted); letter-spacing:0.05em;">TOP 10 VOLUME ORDER BOOK USDT/IDR</h2>
-      </div>
-      <section class="book-grid" id="exchange-grid"></section>
     </div>
+   
+    <div class="orderbook-section-title">
+      <h2 style="font-size:14px; font-weight:700; color:var(--muted); letter-spacing:0.05em;">TOP 10 VOLUME ORDER BOOK USDT/IDR</h2>
+    </div>
+    <section class="book-grid" id="exchange-grid"></section>
     
     <div class="orderbook-section-title" style="margin-top:40px;">
       <h2 style="font-size:14px; font-weight:700; color:var(--muted); letter-spacing:0.05em;"></h2>
@@ -339,7 +339,7 @@
   </main>
 
   <script>
-    const REFRESH_SECONDS = 300;
+    const REFRESH_SECONDS = 600;
     const REQUEST_TIMEOUT_MS = 14000;
 
     let currentSimMode = 'buy';
@@ -855,14 +855,13 @@
 
       throw new Error("Izin Clipboard disekat oleh browser atau tidak didukung di perangkat ini.");
     }
-
     async function copyScreenshot() {
       const btn = document.getElementById("screenshot-btn");
       const originalText = btn.textContent;
       
       try {
         btn.disabled = true;
-        btn.textContent = "Mengambil gambar...";
+        btn.textContent = "⏳";
 
         const element = document.querySelector(".page");
         const canvas = await html2canvas(element, {
@@ -874,7 +873,7 @@
         canvas.toBlob(async (blob) => {
           try {
             await writeBlobToClipboard(blob);
-            showToast("✅ Gambar Halaman Tersalin!", "success");
+            showToast("✅Berhasil Screenshot");
           } catch (err) {
             console.error(err);
             showToast("❌ Gagal menyalin gambar ke Clipboard", "error");
@@ -912,7 +911,7 @@
         canvas.toBlob(async (blob) => {
           try {
             await writeBlobToClipboard(blob);
-            showToast("✅ Screenshot Order Book & Simulator Tersalin!", "success");
+            showToast("✅Berhasil Screenshot");
           } catch (err) {
             console.error(err);
             showToast("❌ Gagal menyalin ke Clipboard", "error");
@@ -1015,7 +1014,7 @@
           body: formData.toString()
         });
 
-        showToast("✅ Berhasil push data ke Google Sheet!", "success");
+        showToast("✅success");
 
       } catch (err) {
         console.error("Gagal push ke GSheet:", err);
