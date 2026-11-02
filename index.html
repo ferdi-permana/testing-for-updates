@@ -54,6 +54,8 @@
     button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; min-height: 36px; padding: 0 12px; cursor: pointer; }
     button:hover { border-color: #9fb2c4; background: var(--surface-2); }
     button.primary { border-color: #245b87; background: #245b87; color: #ffffff; }
+    button.success { border-color: #10b981; background: #10b981; color: #ffffff; font-weight: 600; }
+    button.success:hover { background: #059669; }
     input, select { width: 160px; max-width: 100%; min-height: 36px; border: 1px solid var(--line); border-radius: 6px; padding: 0 10px; color: var(--ink); background: var(--surface); }
     select { cursor: pointer; padding-right: 24px; }
     .page { width: min(1600px, 100%); margin: 0 auto; padding: 24px; }
@@ -196,6 +198,7 @@
           <span id="theme-icon">🌙</span> <span id="theme-text">Mode Gelap</span>
         </button>
         <button class="primary" id="screenshot-btn" type="button" onclick="copyScreenshot()">📸</button>
+        <button class="success" id="btn-push-gsheet" type="button" onclick="pushSnapshotToGsheet()">Quote</button>
         <span class="pill" id="cycle-status"><span class="status-dot delayed"></span><span>Menunggu data</span></span>
         <span class="pill">Perbarui dalam: <strong id="countdown">5m 00s</strong></span>
         <button class="primary" id="refresh-button" type="button">Perbarui</button>
@@ -815,6 +818,83 @@
         alert("Gagal mengambil screenshot. Pastikan izin Clipboard di browser aktif.");
         btn.textContent = originalText;
         btn.disabled = false;
+      }
+    }
+
+    // DISISIPKAN: FUNGSI PUSH SNAPSHOT KE GOOGLE SHEETS
+    async function pushSnapshotToGsheet() {
+      const btn = document.getElementById("btn-push-gsheet");
+      const originalText = btn.textContent;
+
+      try {
+        btn.disabled = true;
+        btn.textContent = "Mengirim...";
+
+        const sizeInput = document.getElementById("calc-usdt-size");
+        const rawAmount = sizeInput ? sizeInput.value.replace(/\./g, "") : "100";
+        const amount = parseFloat(rawAmount) || 100;
+
+        const parseRate = (id) => {
+          const el = document.getElementById(id);
+          if (!el) return 0;
+          const cleanText = el.innerText.replace(/[^0-9]/g, "");
+          return parseFloat(cleanText) || 0;
+        };
+
+        const indodaxTaker = parseRate("rate-t-indodax");
+        const tokoTaker    = parseRate("rate-t-tokocrypto");
+        const pintuTaker   = parseRate("rate-t-pintu");
+
+        const validTakers = [indodaxTaker, tokoTaker, pintuTaker].filter(val => val > 0);
+
+        if (validTakers.length === 0) {
+          alert("❌ Data Taker exchange belum tersedia/masih 0 di UI!");
+          return;
+        }
+
+        let bestTaker = 0;
+        if (currentSimMode === 'buy') {
+          bestTaker = Math.min(...validTakers);
+        } else {
+          bestTaker = Math.max(...validTakers);
+        }
+
+        const now = new Date();
+        const jktDateStr = now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" });
+        const jktDate = new Date(jktDateStr);
+
+        const tanggal = String(jktDate.getDate()).padStart(2, '0') + '/' + 
+                        String(jktDate.getMonth() + 1).padStart(2, '0') + '/' + 
+                        jktDate.getFullYear();
+                        
+        const jam = String(jktDate.getHours()).padStart(2, '0') + ':' + 
+                    String(jktDate.getMinutes()).padStart(2, '0') + ':' + 
+                    String(jktDate.getSeconds()).padStart(2, '0');
+
+        const payload = {
+          tanggal: tanggal,
+          jam: jam,
+          amount: amount,
+          bestTaker: bestTaker
+        };
+
+        const GSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwoep3n_RIF4IppNQ6Clq5GtCYvqbtdAbM5LNsMFutlH5TzG7R4Z2ENXV6M9TkGyo9R/exec";
+
+        await fetch(GSHEET_WEBAPP_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        alert(`✅ Berhasil push snapshot ke Google Sheet!\n\n📅 Tanggal: ${tanggal}\n⏰ Jam: ${jam}\n💵 Amount: ${amount.toLocaleString('id-ID')} USDT\n💰 Best Taker: Rp ${bestTaker.toLocaleString('id-ID')}`);
+
+      } catch (err) {
+        console.error("Gagal push ke GSheet:", err);
+        alert("❌ Gagal mengirim data: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
       }
     }
 
