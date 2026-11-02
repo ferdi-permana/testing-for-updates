@@ -170,7 +170,7 @@
     .source-box { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
     .source-box strong { font-size: 14px; }
 
-    /* STYLING TOAST NOTIFICATION (MENGGANTIKAN POPUP ALERT) */
+    /* STYLING TOAST NOTIFICATION */
     .toast-notification {
       position: fixed;
       bottom: 24px;
@@ -843,6 +843,7 @@
       }
     }
 
+    // HELPER TOAST NOTIFICATION
     function showToast(message, type = 'success') {
       const existingToast = document.querySelector('.toast-notification');
       if (existingToast) existingToast.remove();
@@ -860,6 +861,7 @@
       }, 2500);
     }
 
+    // FUNGSI PUSH SNAPSHOT KE GOOGLE SHEETS
     async function pushSnapshotToGsheet() {
       const btn = document.getElementById("btn-push-gsheet");
       const originalText = btn.textContent;
@@ -908,7 +910,13 @@
                     String(jktDate.getMinutes()).padStart(2, '0') + ':' + 
                     String(jktDate.getSeconds()).padStart(2, '0');
 
+        // MASUKKAN WEB APP URL GOOGLE APPS SCRIPT KAMU DI BAWAH INI:
         const GSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwoep3n_RIF4IppNQ6Clq5GtCYvqbtdAbM5LNsMFutlH5TzG7R4Z2ENXV6M9TkGyo9R/exec";
+
+        if (!GSHEET_WEBAPP_URL || GSHEET_WEBAPP_URL.includes("PASTE_WEB_APP")) {
+          showToast("❌ Silakan isi Web App URL di file index.html terlebih dahulu", "error");
+          return;
+        }
 
         const formData = new URLSearchParams();
         formData.append("tanggal", tanggal);
@@ -923,7 +931,7 @@
           body: formData.toString()
         });
 
-        showToast("✅ success");
+        showToast("✅ Berhasil push data ke Google Sheet!", "success");
 
       } catch (err) {
         console.error("Gagal push ke GSheet:", err);
@@ -1020,7 +1028,7 @@
         }
 
         if (currentSimMode === 'buy') {
-          
+          // 1. MAKER BUY: Best Bid * (1 + Maker Fee Beli)
           const bestBidPrice = data.bids && data.bids[0] ? data.bids[0].price : null;
           if (bestBidPrice && !isNaN(bestBidPrice)) {
             const exactMakerPrice = bestBidPrice * (1 + config.makerFee);
@@ -1029,6 +1037,7 @@
             mEl.textContent = "Rp -";
           }
 
+          // 2. TAKER BUY: VWAP dari Orderbook Asks * (1 + Taker Fee Beli)
           let remainingSize = targetSize;
           let totalCostIdr = 0;
           let totalFilledQty = 0;
@@ -1061,7 +1070,7 @@
           }
 
         } else {
-          
+          // 1. MAKER SELL: Best Ask * (1 - Maker Fee Jual)
           const bestAskPrice = data.asks && data.asks[0] ? data.asks[0].price : null;
           if (bestAskPrice && !isNaN(bestAskPrice)) {
             const exactMakerPrice = bestAskPrice * (1 - config.makerFee);
@@ -1075,7 +1084,7 @@
           let totalRevenueIdr = 0;
           let totalFilledQty = 0;
 
-          const sortedBids = Array.isArray(data.bids) ? [...data.bids].sort((a, b) => b.price - a.price);
+          const sortedBids = Array.isArray(data.bids) ? [...data.bids].sort((a, b) => b.price - a.price) : [];
 
           if (sortedBids.length > 0) {
             for (const order of sortedBids) {
