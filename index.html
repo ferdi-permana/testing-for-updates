@@ -946,85 +946,82 @@
       }, 2500);
     }
 
-    async function pushSnapshotToGsheet() {
-      const btn = document.getElementById("btn-push-gsheet");
-      const originalText = btn.textContent;
+async function pushSnapshotToGsheet() {
+  const btn = document.getElementById("btn-push-gsheet");
+  const originalText = btn.textContent;
 
-      try {
-        btn.disabled = true;
-        btn.textContent = "Mengirim...";
+  try {
+    btn.disabled = true;
+    btn.textContent = "Mengirim...";
 
-        const sizeInput = document.getElementById("calc-usdt-size");
-        const rawAmount = sizeInput ? sizeInput.value.replace(/\./g, "") : "100";
-        const amount = parseFloat(rawAmount) || 100;
+    const sizeInput = document.getElementById("calc-usdt-size");
+    const rawAmount = sizeInput ? sizeInput.value.replace(/\./g, "") : "100";
+    const amount = parseFloat(rawAmount) || 100;
 
-        const parseRate = (id) => {
-          const el = document.getElementById(id);
-          if (!el) return 0;
-          const cleanText = el.innerText.replace(/[^0-9]/g, "");
-          return parseFloat(cleanText) || 0;
-        };
+    const parseRateNumber = (id) => {
+      const el = document.getElementById(id);
+      if (!el) return 0;
 
-        const indodaxTaker = parseRate("rate-t-indodax");
-        const tokoTaker    = parseRate("rate-t-tokocrypto");
-        const pintuTaker   = parseRate("rate-t-pintu");
-        const validTakers = [indodaxTaker, tokoTaker, pintuTaker].filter(val => val > 0);
+      const cleanText = el.textContent.replace(/[^0-9]/g, "");
+      return parseFloat(cleanText) || 0;
+    };
 
-        if (validTakers.length === 0) {
-          showToast("❌ Data Taker exchange belum tersedia/masih 0", "error");
-          return;
-        }
+    const indodaxTaker = parseRateNumber("rate-t-indodax");
+    const tokoTaker    = parseRateNumber("rate-t-tokocrypto");
+    const pintuTaker   = parseRateNumber("rate-t-pintu");
 
-        let bestTaker = 0;
-        if (currentSimMode === 'buy') {
-          bestTaker = Math.min(...validTakers);
-        } else {
-          bestTaker = Math.max(...validTakers);
-        }
+    const validTakers = [indodaxTaker, tokoTaker, pintuTaker].filter(val => val > 0);
 
-        const now = new Date();
-        const jktDateStr = now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" });
-        const jktDate = new Date(jktDateStr);
+    let bestTaker = 0;
+    if (validTakers.length > 0) {
+      bestTaker = (currentSimMode === 'sell') ? Math.max(...validTakers) : Math.min(...validTakers);
+    } else {
 
-        const tanggal = String(jktDate.getDate()).padStart(2, '0') + '/' + 
-                        String(jktDate.getMonth() + 1).padStart(2, '0') + '/' + 
-                        jktDate.getFullYear();
-                        
-        const jam = String(jktDate.getHours()).padStart(2, '0') + ':' + 
-                    String(jktDate.getMinutes()).padStart(2, '0') + ':' + 
-                    String(jktDate.getSeconds()).padStart(2, '0');
-
-        const GSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwoep3n_RIF4IppNQ6Clq5GtCYvqbtdAbM5LNsMFut1H5TzG7R4Z2ENXV6M9TkGyo9R/exec";
-
-        if (!GSHEET_WEBAPP_URL || GSHEET_WEBAPP_URL.includes("PASTE_WEB_APP")) {
-          showToast("❌ Silakan isi Web App URL di file index.html terlebih dahulu", "error");
-          return;
-        }
-
-        const formData = new URLSearchParams();
-        formData.append("tanggal", tanggal);
-        formData.append("jam", jam);
-        formData.append("amount", amount);
-        formData.append("bestTaker", bestTaker);
-
-        await fetch(GSHEET_WEBAPP_URL, {
-          method: "POST",
-          mode: "no-cors",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: formData.toString()
-        });
-
-        showToast("✅success");
-
-      } catch (err) {
-        console.error("Gagal push ke GSheet:", err);
-        showToast("❌ Gagal mengirim data", "error");
-      } finally {
-        btn.disabled = false;
-        btn.textContent = originalText;
-      }
+      bestTaker = parseRateNumber("rate-t-reku") || parseRateNumber("rate-m-reku");
     }
 
+    if (bestTaker === 0) {
+      showToast("❌ Data kurs belum siap. Harap tunggu sebentar.", "error");
+      return;
+    }
+
+    const now = new Date();
+    const jktDateStr = now.toLocaleString("en-US", { timeZone: "Asia/Jakarta" });
+    const jktDate = new Date(jktDateStr);
+
+    const tanggal = String(jktDate.getDate()).padStart(2, '0') + '/' + 
+                    String(jktDate.getMonth() + 1).padStart(2, '0') + '/' + 
+                    jktDate.getFullYear();
+                    
+    const jam = String(jktDate.getHours()).padStart(2, '0') + ':' + 
+                String(jktDate.getMinutes()).padStart(2, '0') + ':' + 
+                String(jktDate.getSeconds()).padStart(2, '0');
+
+    const GSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwoep3n_RIF4IppNQ6Clq5GtCYvqbtdAbM5LNsMFut1H5TzG7R4Z2ENXV6M9TkGyo9R/exec";
+
+    const formData = new URLSearchParams();
+    formData.append("tanggal", tanggal);
+    formData.append("jam", jam);
+    formData.append("amount", amount);
+    formData.append("bestTaker", bestTaker);
+
+    await fetch(GSHEET_WEBAPP_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formData.toString()
+    });
+
+    showToast("✅Success");
+
+  } catch (err) {
+    console.error("Gagal push ke GSheet:", err);
+    showToast("❌ Gagal mengirim data: " + err.message, "error");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
     function renderExchanges() {
       exchangeConfigs.forEach((config) => {
         const data = state.exchanges[config.key];
