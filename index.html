@@ -880,16 +880,23 @@
 
         const GSHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbwoep3n_RIF4IppNQ6Clq5GtCYvqbtdAbM5LNsMFutlH5TzG7R4Z2ENXV6M9TkGyo9R/exec";
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000)
+        
         await fetch(GSHEET_WEBAPP_URL, {
           method: "POST",
           mode: "no-cors",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload),
+          signal: controller.signal
         });
 
-        alert(`✅ Berhasil push snapshot ke Google Sheet!\n\n📅 Tanggal: ${tanggal}\n⏰ Jam: ${jam}\n💵 Amount: ${amount.toLocaleString('id-ID')} USDT\n💰 Best Taker: Rp ${bestTaker.toLocaleString('id-ID')}`);
+        clearTimeout(timeoutId);
 
-      } catch (err) {
+        alert(`✅ Berhasil push snapshot ke Google Sheet!`);
+        }
+      
+      catch (err) {
         console.error("Gagal push ke GSheet:", err);
         alert("❌ Gagal mengirim data: " + err.message);
       } finally {
