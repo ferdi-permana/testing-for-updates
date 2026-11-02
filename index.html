@@ -6,7 +6,7 @@
   <title>USDT/IDR Live Order Book</title>
   
   <link rel="icon" type="image/png" href="logo.png">
-  
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
   <style>
@@ -53,10 +53,24 @@
     button { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; min-height: 36px; padding: 0 12px; cursor: pointer; }
     button:hover { border-color: #9fb2c4; background: var(--surface-2); }
     button.primary { border-color: #245b87; background: #245b87; color: #ffffff; }
+    button.primary:hover { background: #1b476b; }
     button.success { border-color: #10b981; background: #10b981; color: #ffffff; font-weight: 600; }
     button.success:hover { background: #059669; }
-    button.quote-btn { border-color: #087f5b; background: #087f5b; color: #ffffff; font-weight: 600; padding: 0 10px; min-height: 28px; font-size: 11px; margin-left: 8px; }
-    button.quote-btn:hover { background: #066649; }
+    
+    button.btn-camera-partial { 
+      border-color: #245b87; 
+      background: #245b87; 
+      color: #ffffff; 
+      font-size: 14px; 
+      padding: 0 10px; 
+      min-height: 28px; 
+      margin-right: 8px; 
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+    }
+    button.btn-camera-partial:hover { background: #1b476b; }
     
     input, select { width: 160px; max-width: 100%; min-height: 36px; border: 1px solid var(--line); border-radius: 6px; padding: 0 10px; color: var(--ink); background: var(--surface); }
     select { cursor: pointer; padding-right: 24px; }
@@ -172,7 +186,6 @@
     .source-box { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
     .source-box strong { font-size: 14px; }
 
-    /* STYLING TOAST NOTIFICATION */
     .toast-notification {
       position: fixed;
       bottom: 24px;
@@ -222,7 +235,7 @@
         <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()">
           <span id="theme-icon">🌙</span> <span id="theme-text">Mode Gelap</span>
         </button>
-        <button class="primary" id="screenshot-btn" type="button" onclick="copyScreenshot()">📸</button>
+         <button class="primary" id="screenshot-btn" type="button" onclick="copyScreenshot()">📸</button>
         <button class="success" id="btn-push-gsheet" type="button" onclick="pushSnapshotToGsheet()">Request</button>
         <span class="pill" id="cycle-status"><span class="status-dot delayed"></span><span>Menunggu data</span></span>
         <span class="pill">Perbarui dalam: <strong id="countdown">5m 00s</strong></span>
@@ -251,11 +264,13 @@
           <div class="sim-header">
             <span id="sim-title-label">Simulasi Beli USDT (Harga Bersih)</span>
             <div style="display: flex; align-items: center;">
+
+              <button class="btn-camera-partial" id="screenshot-quote-btn" type="button" onclick="copyQuoteScreenshot()">📸</button>
+              
               <div class="sim-mode-toggle">
                 <button type="button" class="sim-mode-btn active-buy" id="btn-mode-buy" onclick="setSimMode('buy')">Beli</button>
                 <button type="button" class="sim-mode-btn" id="btn-mode-sell" onclick="setSimMode('sell')">Jual</button>
               </div>
-              <button class="quote-btn" id="screenshot-quote-btn" type="button" onclick="copyQuoteScreenshot()">Quote</button>
             </div>
           </div>
           <div class="sim-row">
@@ -328,7 +343,8 @@
     const REQUEST_TIMEOUT_MS = 14000;
 
     let currentSimMode = 'buy';
-  
+    
+    // Fee Structure Beli (BUY)
     const FeesBuy = {
       reku: { makerFee: 0.0010555, takerFee: 0.0010555 },
       pintu: { makerFee: 0.0012555, takerFee: 0.0017555 },
@@ -350,6 +366,7 @@
       }
     };
 
+    // Fee Structure Jual (SELL)
     const FeesSell = {
       reku: { makerFee: 0.0031555, takerFee: 0.0031555 },
       pintu: { makerFee: 0.0033555, takerFee: 0.0038555 },
@@ -418,12 +435,12 @@
         btnBuy.className = "sim-mode-btn active-buy";
         btnSell.className = "sim-mode-btn";
         labelInput.textContent = "Ukuran Beli (USDT)";
-        labelTitle.textContent = "Simulasi Beli USDT (Total Biaya Dikeluarkan)";
+        labelTitle.textContent = "Simulasi Beli USDT (Harga Bersih)";
       } else {
         btnBuy.className = "sim-mode-btn";
         btnSell.className = "sim-mode-btn active-sell";
         labelInput.textContent = "Ukuran Jual (USDT)";
-        labelTitle.textContent = "Simulasi Jual USDT (Total Bersih)";
+        labelTitle.textContent = "Simulasi Jual USDT (Hasil Bersih)";
       }
 
       calculateSimulatedRates();
@@ -812,7 +829,7 @@
         console.warn("Gagal sync orderbook ke API backend:", err);
       }
     }
-
+    
     async function writeBlobToClipboard(blob) {
       if (!blob) throw new Error("Blob gambar tidak valid");
       
@@ -825,7 +842,7 @@
           console.warn("ClipboardItem direct write gagal, mencoba fallback...", err);
         }
       }
-
+      
       if (window.ClipboardItem) {
         try {
           const item = new ClipboardItem({
@@ -883,7 +900,7 @@
       
       try {
         btn.disabled = true;
-        btn.textContent = "Copying...";
+        btn.textContent = "⏳";
 
         const element = document.getElementById("quote-capture-area");
         if (!element) throw new Error("Elemen area Quote tidak ditemukan.");
@@ -897,10 +914,10 @@
         canvas.toBlob(async (blob) => {
           try {
             await writeBlobToClipboard(blob);
-            showToast("✅ Quote Screenshot Tersalin ke Clipboard!", "success");
+            showToast("✅ Screenshot Order Book & Simulator Tersalin!", "success");
           } catch (err) {
             console.error(err);
-            showToast("❌ Gagal menyalin Quote ke Clipboard", "error");
+            showToast("❌ Gagal menyalin ke Clipboard", "error");
           } finally {
             btn.textContent = originalText;
             btn.disabled = false;
@@ -909,7 +926,7 @@
 
       } catch (err) {
         console.error("Gagal menyalin quote screenshot:", err);
-        showToast("❌ Gagal mengambil Quote Screenshot", "error");
+        showToast("❌ Gagal mengambil screenshot", "error");
         btn.textContent = originalText;
         btn.disabled = false;
       }
@@ -1000,7 +1017,7 @@
           body: formData.toString()
         });
 
-        showToast("✅Success");
+        showToast("✅ Berhasil push data ke Google Sheet!", "success");
 
       } catch (err) {
         console.error("Gagal push ke GSheet:", err);
@@ -1069,7 +1086,6 @@
         pintu: activeFeeStructure.pintu 
       };
 
-      // Rules Pembulatan: Beli = Round Up (Math.ceil), Jual = Round Floor (Math.floor)
       const processRounding = (val) => {
         if (!val || isNaN(val)) return "Rp -";
         let rounded = 0;
