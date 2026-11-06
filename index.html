@@ -638,104 +638,13 @@
       }
     }
 
-async function fetchIndodax() {
-  return new Promise((resolve, reject) => {
-    // 1. Buat iframe tersembunyi di dalam browser device pengguna
-    const iframe = document.createElement("iframe");
-    iframe.style.display = "none";
-    iframe.id = "indodax-fetch-bridge";
-    
-    // Timeout 10 detik jika jaringan lambat
-    const timeout = setTimeout(() => {
-      cleanup();
-      reject(new Error("Timeout memuat data Indodax dari device pengguna"));
-    }, 10000);
-
-    function cleanup() {
-      clearTimeout(timeout);
-      window.removeEventListener("message", handleMessage);
-      if (iframe.parentNode) iframe.parentNode.removeChild(iframe);
+    async function fetchIndodax() {
+      const book = await fetchJsonWithCandidates(["https://indodax.com/api/depth/usdtidr", "https://indodax.com/api/depth/usdt_idr"]);
+      const bids = normalizePriceQtySide(book.buy || book.bids || [], "bid");
+      const asks = normalizePriceQtySide(book.sell || book.asks || [], "ask");
+      return finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() });
     }
 
-    function handleMessage(event) {
-      if (event.data && event.data.type === "INDODAX_DATA_SUCCESS") {
-        cleanup();
-        try {
-          const book = event.data.payload;
-          
-          const parseSide = (list, side) => {
-            if (!Array.isArray(list)) return [];
-            return list.map(item => {
-              let price = 0, qty = 0;
-              if (Array.isArray(item)) {
-                price = Number(item[0]);
-                qty = Number(item[1]);
-              } else if (item && typeof item === "object") {
-                price = Number(item.price || item.rate || 0);
-                qty = Number(item.amount || item.vol || item.qty || 0);
-              }
-              return { price, qty, notional: price * qty, side };
-            }).filter(l => isFinite(l.price) && isFinite(l.qty) && l.price > 0 && l.qty > 0);
-          };
-
-          const bids = parseSide(book.buy || book.bids || [], "bid");
-          const asks = parseSide(book.sell || book.asks || [], "ask");
-
-          resolve(finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() }));
-        } catch (err) {
-          reject(err);
-        }
-      } else if (event.data && event.data.type === "INDODAX_DATA_ERROR") {
-        cleanup();
-        reject(new Error(event.data.error || "Bridge Indodax Gagal"));
-      }
-    }
-
-    window.addEventListener("message", handleMessage);
-
-    // 2. Data URI HTML yang berjalan terisolasi di browser client
-    const bridgeHtml = `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body>
-        <script>
-          (async function() {
-            try {
-              const res = await fetch("https://indodax.com/api/depth/usdtidr", { mode: "cors" });
-              const data = await res.json();
-              window.parent.postMessage({ type: "INDODAX_DATA_SUCCESS", payload: data }, "*");
-            } catch (err) {
-              // Fallback jika mode cors ketat: gunakan XMLHttpRequest dokumen
-              try {
-                const xhr = new XMLHttpRequest();
-                xhr.open("GET", "https://indodax.com/api/depth/usdtidr", true);
-                xhr.onload = function() {
-                  if (xhr.status === 200) {
-                    window.parent.postMessage({ type: "INDODAX_DATA_SUCCESS", payload: JSON.parse(xhr.responseText) }, "*");
-                  } else {
-                    window.parent.postMessage({ type: "INDODAX_DATA_ERROR", error: "Status " + xhr.status }, "*");
-                  }
-                };
-                xhr.onerror = function() {
-                  window.parent.postMessage({ type: "INDODAX_DATA_ERROR", error: "XHR Failed" }, "*");
-                };
-                xhr.send();
-              } catch(e) {
-                window.parent.postMessage({ type: "INDODAX_DATA_ERROR", error: e.message }, "*");
-              }
-            }
-          })();
-        <\/script>
-      </body>
-      </html>
-    `;
-
-    // Pasang iframe ke DOM client
-    iframe.srcdoc = bridgeHtml;
-    document.body.appendChild(iframe);
-  });
-}
     async function fetchPintu() {
       const payload = await fetchJsonWithCandidates([
         "https://api.pintu.pro/v1/public/get-book?symbol=USDT-IDR&depth=20",
