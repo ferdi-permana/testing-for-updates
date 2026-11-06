@@ -39,37 +39,46 @@ export async function onRequestGet(context) {
   const BROWSERLESS_TOKEN = "2UgSAmpChJzCm9Sfbc672c6f839acf97057ba6a4d1c104f62";
 
   // ========================================================
-  // 1. TOKOCRYPTO & INDODAX: Menggunakan Browserless Server (Bypass Bot/Cloudflare)
+  // 1. TOKOCRYPTO & INDODAX: Menggunakan Browserless Function (JSON Fetcher)
   // ========================================================
   if (
     target.hostname === "api.tokocrypto.com" || 
     target.hostname === "www.tokocrypto.site" ||
     target.hostname === "indodax.com"
   ) {
-    const browserlessUrl = `https://chrome.browserless.io/content?token=${BROWSERLESS_TOKEN}`;
+    // Menggunakan endpoint /function agar Browserless mengeksekusi fetch dari konteks Chromium murni
+    const browserlessFnUrl = `https://chrome.browserless.io/function?token=${BROWSERLESS_TOKEN}`;
+
+    // Script Puppeteer ringan yang berjalan di server Browserless untuk ambil JSON Indodax/Tokocrypto
+    const code = `
+      module.exports = async ({ page }) => {
+        const response = await page.goto('${target.toString()}', { waitUntil: 'networkidle0' });
+        const text = await response.text();
+        return {
+          data: text,
+          type: 'application/json'
+        };
+      };
+    `;
 
     try {
-      const response = await fetch(browserlessUrl, {
+      const response = await fetch(browserlessFnUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url: target.toString(),
-          waitUntil: "networkidle0"
-        })
+        headers: { "Content-Type": "application/javascript" },
+        body: code
       });
 
       if (!response.ok) {
-        throw new Error(`Browserless status: ${response.status}`);
+        throw new Error(`Browserless HTTP Status: ${response.status}`);
       }
 
-      const htmlContent = await response.text();
-      let rawText = htmlContent.trim().replace(/<[^>]*>/g, "");
+      const rawText = await response.text();
 
       let parsedData;
       try {
         parsedData = JSON.parse(rawText);
       } catch {
-        parsedData = { error: "Gagal memparsing teks layar menjadi JSON", raw: rawText };
+        parsedData = { error: "Gagal memparsing respons JSON", raw: rawText };
       }
 
       return jsonResponse(parsedData, 200);
