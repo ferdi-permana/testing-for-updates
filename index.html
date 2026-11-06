@@ -418,8 +418,8 @@
       renderShell();
       bindEvents();
       initTheme();
-      refreshAll();
-      startCountdown();
+      //refreshAll();
+      //startCountdown();
     }
 
     function setSimMode(mode) {
@@ -557,7 +557,7 @@
         state.countdown -= 1;
         if (state.countdown <= 0) {
           state.countdown = REFRESH_SECONDS;
-          refreshAll();
+          //refreshAll();
         }
         els.countdown.textContent = formatCountdown(state.countdown);
         renderSourceAges();
