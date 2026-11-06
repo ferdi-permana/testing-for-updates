@@ -639,43 +639,31 @@
     }
 
 async function fetchIndodax() {
-  return new Promise((resolve, reject) => {
-    const callbackName = 'indodax_cb_' + Math.random().toString(36).substring(2, 9);
-    
-    const timeout = setTimeout(() => {
-      delete window[callbackName];
-      const scriptEl = document.getElementById(callbackName);
-      if (scriptEl) scriptEl.remove();
-      reject(new Error("Fetch Indodax dari device pengguna mengalami timeout"));
-    }, 10000);
+  const candidateUrls = [
+    "https://indodax.com/api/depth/usdtidr",
+    "https://indodax.com/api/depth/usdt_idr"
+  ];
 
-    window[callbackName] = function(book) {
-      clearTimeout(timeout);
-      delete window[callbackName];
-      const scriptEl = document.getElementById(callbackName);
-      if (scriptEl) scriptEl.remove();
+  for (const targetUrl of candidateUrls) {
+    try {
+      const proxyUrl = "https://corsproxy.io/?" + encodeURIComponent(targetUrl);
+      const response = await fetch(proxyUrl, { cache: "no-store" });
+      
+      if (!response.ok) continue;
 
-      try {
-        const bids = normalizePriceQtySide(book.buy || book.bids || [], "bid");
-        const asks = normalizePriceQtySide(book.sell || book.asks || [], "ask");
-        resolve(finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() }));
-      } catch (err) {
-        reject(err);
+      const book = await response.json();
+      const bids = normalizePriceQtySide(book.buy || book.bids || [], "bid");
+      const asks = normalizePriceQtySide(book.sell || book.asks || [], "ask");
+
+      if (bids.length > 0 || asks.length > 0) {
+        return finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() });
       }
-    };
+    } catch (err) {
+      console.warn(`Attempt failed for ${targetUrl}:`, err);
+    }
+  }
 
-    const script = document.createElement("script");
-    script.id = callbackName;
-    script.src = `https://indodax.com/api/depth/usdtidr?callback=${callbackName}`;
-    script.onerror = () => {
-      clearTimeout(timeout);
-      delete window[callbackName];
-      script.remove();
-      reject(new Error("Gagal mengambil data Indodax dari device pengguna"));
-    };
-
-    document.body.appendChild(script);
-  });
+  throw new Error("Gagal mengambil data Indodax dari device pengguna.");
 }
 
     async function fetchPintu() {
