@@ -418,8 +418,8 @@
       renderShell();
       bindEvents();
       initTheme();
-      //refreshAll();
-      //startCountdown();
+      refreshAll();
+      startCountdown();
     }
 
     function setSimMode(mode) {
@@ -557,7 +557,7 @@
         state.countdown -= 1;
         if (state.countdown <= 0) {
           state.countdown = REFRESH_SECONDS;
-          //refreshAll();
+          refreshAll();
         }
         els.countdown.textContent = formatCountdown(state.countdown);
         renderSourceAges();
@@ -639,11 +639,26 @@
     }
 
     async function fetchIndodax() {
-      const book = await fetchJsonWithCandidates(["https://indodax.com/api/depth/usdtidr", "https://indodax.com/api/depth/usdt_idr"]);
-      const bids = normalizePriceQtySide(book.buy || book.bids || [], "bid");
-      const asks = normalizePriceQtySide(book.sell || book.asks || [], "ask");
-      return finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() });
+  const VERCEL_PROXY_URL = "https://indodax-proxy-vercel.vercel.app/api";
+
+  try {
+    const response = await fetch(VERCEL_PROXY_URL, { cache: "no-store" });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP Error Status: ${response.status}`);
     }
+
+    const book = await response.json();
+
+    const bids = normalizePriceQtySide(book.buy || book.bids || [], "bid");
+    const asks = normalizePriceQtySide(book.sell || book.asks || [], "ask");
+
+    return finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() });
+  } catch (error) {
+    console.error("Gagal memuat Indodax via Vercel Hybrid:", error);
+    throw error;
+  }
+}
 
     async function fetchPintu() {
       const payload = await fetchJsonWithCandidates([
