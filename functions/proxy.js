@@ -36,22 +36,22 @@ export async function onRequestGet(context) {
     return jsonResponse({ error: "Proxy host is not allowed" }, 403);
   }
 
+  const BROWSERLESS_TOKEN = "2UgSAmpChJzCm9Sfbc672c6f839acf97057ba6a4d1c104f62";
+
   // ========================================================
-  // JALUR KHUSUS TOKOCRYPTO: Menembak via HTTP API Browserless (Tanpa Modul Puppeteer)
+  // 1. TOKOCRYPTO & INDODAX: Menggunakan Browserless Server (Bypass Bot/Cloudflare)
   // ========================================================
-  if (target.hostname === "api.tokocrypto.com" || target.hostname === "www.tokocrypto.site") {
-    const BROWSERLESS_TOKEN = "2UgSAmpChJzCm9Sfbc672c6f839acf97057ba6a4d1c104f62";
-    
-    // Menggunakan Endpoint Kinerja Tinggi dari Browserless untuk langsung mengambil konten JSON
+  if (
+    target.hostname === "api.tokocrypto.com" || 
+    target.hostname === "www.tokocrypto.site" ||
+    target.hostname === "indodax.com"
+  ) {
     const browserlessUrl = `https://chrome.browserless.io/content?token=${BROWSERLESS_TOKEN}`;
 
     try {
-      // Menyuruh Browserless membuka web Tokocrypto dari server mereka
       const response = await fetch(browserlessUrl, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           url: target.toString(),
           waitUntil: "networkidle0"
@@ -59,29 +59,28 @@ export async function onRequestGet(context) {
       });
 
       if (!response.ok) {
-        throw new Error(`Browserless membalas status: ${response.status}`);
+        throw new Error(`Browserless status: ${response.status}`);
       }
 
       const htmlContent = await response.text();
-      let rawText = htmlContent.trim();
-      rawText = rawText.replace(/<[^>]*>/g, "");
+      let rawText = htmlContent.trim().replace(/<[^>]*>/g, "");
 
       let parsedData;
       try {
         parsedData = JSON.parse(rawText);
       } catch {
-        parsedData = { error: "Gagal memparsing teks layar menjadi JSON asli", raw: rawText };
+        parsedData = { error: "Gagal memparsing teks layar menjadi JSON", raw: rawText };
       }
 
       return jsonResponse(parsedData, 200);
 
     } catch (scrapeError) {
-      return jsonResponse({ error: "Bypass Tokocrypto Gagal: " + scrapeError.message }, 502);
+      return jsonResponse({ error: "Bypass Gagal: " + scrapeError.message }, 502);
     }
   }
 
   // ========================================================
-  // JALUR INDODAX & OTHER EXCHANGES: Memunculkan Identitas Browser Asli
+  // 2. EXCHANGE LAINNYA & BCA: Fetch Standard via Server
   // ========================================================
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 14000);
@@ -90,23 +89,10 @@ export async function onRequestGet(context) {
     const upstream = await fetch(target.toString(), {
       signal: controller.signal,
       headers: {
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/json",
-        "Accept-Language": "en-US,en;q=0.9,id;q=0.8",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "Sec-Ch-Ua": '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-        "Sec-Ch-Ua-Mobile": "?0",
-        "Sec-Ch-Ua-Platform": '"Windows"',
-        "Sec-Fetch-Dest": "document",
-        "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "none",
-        "Sec-Fetch-User": "?1",
-        "Upgrade-Insecure-Requests": "1",
-        // Menyamarkan IP Cloudflare worker agar dikenali Indodax sebagai request Chrome Windows asli
+        "Accept": "application/json,text/html,application/xhtml+xml,*/*",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
       }
     });
-
     const body = await upstream.arrayBuffer();
     return new Response(body, {
       status: upstream.status,
@@ -118,7 +104,7 @@ export async function onRequestGet(context) {
     });
   } catch (error) {
     return jsonResponse(
-      { error: error.name === "AbortError" ? "Proxy timeout" : "Upstream fetch failed: " + error.message },
+      { error: error.name === "AbortError" ? "Proxy timeout" : "Upstream fetch failed" },
       502
     );
   } finally {
