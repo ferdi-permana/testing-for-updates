@@ -36,60 +36,58 @@ export async function onRequestGet(context) {
     return jsonResponse({ error: "Proxy host is not allowed" }, 403);
   }
 
-  const BROWSERLESS_TOKEN = "2UgSAmpChJzCm9Sfbc672c6f839acf97057ba6a4d1c104f62";
-
   // ========================================================
-  // 1. TOKOCRYPTO & INDODAX: Menggunakan Browserless Function (JSON Fetcher)
+  // JALUR KHUSUS TOKOCRYPTO: Menembak via HTTP API Browserless (Tanpa Modul Puppeteer)
   // ========================================================
-  if (
-    target.hostname === "api.tokocrypto.com" || 
-    target.hostname === "www.tokocrypto.site" ||
-    target.hostname === "indodax.com"
-  ) {
-    // Menggunakan endpoint /function agar Browserless mengeksekusi fetch dari konteks Chromium murni
-    const browserlessFnUrl = `https://chrome.browserless.io/function?token=${BROWSERLESS_TOKEN}`;
-
-    // Script Puppeteer ringan yang berjalan di server Browserless untuk ambil JSON Indodax/Tokocrypto
-    const code = `
-      module.exports = async ({ page }) => {
-        const response = await page.goto('${target.toString()}', { waitUntil: 'networkidle0' });
-        const text = await response.text();
-        return {
-          data: text,
-          type: 'application/json'
-        };
-      };
-    `;
+  if (target.hostname === "api.tokocrypto.com" || target.hostname === "www.tokocrypto.site") {
+    const BROWSERLESS_TOKEN = "2UgSAmpChJzCm9Sfbc672c6f839acf97057ba6a4d1c104f62";
+    
+    // Menggunakan Endpoint Kinerja Tinggi dari Browserless untuk langsung mengambil konten JSON
+    const browserlessUrl = `https://chrome.browserless.io/content?token=${BROWSERLESS_TOKEN}`;
 
     try {
-      const response = await fetch(browserlessFnUrl, {
+      // Menyuruh Browserless membuka web Tokocrypto dari server mereka
+      const response = await fetch(browserlessUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/javascript" },
-        body: code
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          url: target.toString(),
+          // Menunggu hingga jaringan tenang (data order book sudah dimuat lengkap)
+          waitUntil: "networkidle0"
+        })
       });
 
       if (!response.ok) {
-        throw new Error(`Browserless HTTP Status: ${response.status}`);
+        throw new Error(`Browserless membalas status: ${response.status}`);
       }
 
-      const rawText = await response.text();
+      // Browserless mengembalikan struktur HTML penuh dari halaman target
+const htmlContent = await response.text();
 
-      let parsedData;
-      try {
-        parsedData = JSON.parse(rawText);
-      } catch {
-        parsedData = { error: "Gagal memparsing respons JSON", raw: rawText };
-      }
+// Menggunakan let agar variabelnya sah untuk diubah-ubah nilainya
+let rawText = htmlContent.trim();
 
-      return jsonResponse(parsedData, 200);
+// Bersihkan sisa elemen pre-wrap HTML jika ada di layar browser
+rawText = rawText.replace(/<[^>]*>/g, "");
+
+let parsedData;
+try {
+  parsedData = JSON.parse(rawText);
+} catch {
+  parsedData = { error: "Gagal memparsing teks layar menjadi JSON asli", raw: rawText };
+}
+
+return jsonResponse(parsedData, 200);
 
     } catch (scrapeError) {
-      return jsonResponse({ error: "Bypass Gagal: " + scrapeError.message }, 502);
+      return jsonResponse({ error: "Bypass Tokocrypto Gagal: " + scrapeError.message }, 502);
     }
   }
 
   // ========================================================
-  // 2. EXCHANGE LAINNYA & BCA: Fetch Standard via Server
+  // JALUR ORIGINAL: Bursa/Bank lainnya tetap menggunakan fetch bawaan Anda
   // ========================================================
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 14000);
@@ -99,7 +97,7 @@ export async function onRequestGet(context) {
       signal: controller.signal,
       headers: {
         "Accept": "application/json,text/html,application/xhtml+xml,*/*",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+        "User-Agent": "TreasuryDashboard/1.0"
       }
     });
     const body = await upstream.arrayBuffer();
