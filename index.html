@@ -639,12 +639,15 @@
     }
 
     async function fetchIndodax() {
-      const book = await fetchJsonWithCandidates(["https://indodax.com/api/depth/usdtidr", "https://indodax.com/api/depth/usdt_idr"]);
-      const bids = normalizePriceQtySide(book.buy || book.bids || [], "bid");
-      const asks = normalizePriceQtySide(book.sell || book.asks || [], "ask");
-      return finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() });
-    }
-
+  const book = await fetchJsonWithCandidates([
+    "https://indodax.com/api/usdtidr/depth",
+    "https://indodax.com/api/depth/usdtidr"
+  ]);
+  const bids = normalizePriceQtySide(book.buy || book.bids || [], "bid");
+  const asks = normalizePriceQtySide(book.sell || book.asks || [], "ask");
+  return finalizeBook({ symbol: "USDTIDR", bids, asks, fetchedAt: new Date() });
+}
+    
     async function fetchPintu() {
       const payload = await fetchJsonWithCandidates([
         "https://api.pintu.pro/v1/public/get-book?symbol=USDT-IDR&depth=20",
